@@ -1,4 +1,4 @@
-package nikita;
+package cnn;
 
 import junit.framework.Test;
 import junit.framework.TestCase;

@@ -1,4 +1,4 @@
-package nikita;
+package cnn;
 
 /**
  * Hello world!
