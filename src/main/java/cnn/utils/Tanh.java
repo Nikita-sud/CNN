@@ -2,14 +2,15 @@ package cnn.utils;
 
 import cnn.interfaces.ActivationFunction;
 
-public class ReLU implements ActivationFunction {
+public class Tanh implements ActivationFunction {
     @Override
     public double activate(double x) {
-        return Math.max(0, x);
+        return Math.tanh(x);
     }
 
     @Override
     public double derivative(double x) {
-        return x > 0 ? 1 : 0;
+        double tanh = activate(x);
+        return 1 - tanh * tanh;
     }
 }

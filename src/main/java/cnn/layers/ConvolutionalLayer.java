@@ -1,36 +1,140 @@
 package cnn.layers;
 
 import cnn.interfaces.Layer;
+import cnn.utils.MatrixUtils;
+import cnn.utils.ReLU;
+import cnn.utils.TrainingConfig;
+import cnn.interfaces.ActivationFunction;
 
 public class ConvolutionalLayer implements Layer {
     private int filterSize;
     private int numFilters;
-    private double[][][] filters;
+    private int stride;
+    private double[][][][] filters;
+    private double[] biases;
+    private double[][][] input;
+    private double[][][] activatedOutput;
+    private ActivationFunction activationFunction;
+    private TrainingConfig config;
 
-    public ConvolutionalLayer(int filterSize, int numFilters) {
+    public ConvolutionalLayer(int filterSize, int numFilters, int stride, ActivationFunction activationFunction, TrainingConfig config) {
         this.filterSize = filterSize;
         this.numFilters = numFilters;
-        this.filters = new double[numFilters][filterSize][filterSize];
-        initializeFilters();
+        this.stride = stride;
+        this.filters = new double[numFilters][][][];
+        this.biases = new double[numFilters];
+        this.activationFunction = activationFunction;
+        this.config = config;
+        initializeBiases();
     }
 
-    private void initializeFilters() {
-        for (int i = 0; i < numFilters; i++) {
-            for (int j = 0; j < filterSize; j++) {
-                for (int k = 0; k < filterSize; k++) {
-                    filters[i][j][k] = Math.random();
+    public ConvolutionalLayer(int filterSize, int numFilters, ActivationFunction activationFunction, TrainingConfig config) {
+        this(filterSize, numFilters, 1, activationFunction, config);
+    }
+
+    public ConvolutionalLayer(int filterSize, int numFilters, TrainingConfig config) {
+        this(filterSize, numFilters, 1, new ReLU(), config);
+    }
+
+    private void initializeFilters(int inputDepth) {
+        for (int f = 0; f < numFilters; f++) {
+            filters[f] = new double[inputDepth][filterSize][filterSize];
+            for (int d = 0; d < inputDepth; d++) {
+                for (int i = 0; i < filterSize; i++) {
+                    for (int j = 0; j < filterSize; j++) {
+                        filters[f][d][i][j] = Math.random();
+                    }
                 }
             }
         }
     }
 
+    private void initializeBiases() {
+        for (int i = 0; i < numFilters; i++) {
+            biases[i] = Math.random();
+        }
+    }
+
     @Override
     public double[][][] forward(double[][][] input) {
-        return new double[0][][];
+        this.input = input;
+        int inputDepth = input.length;
+        int inputSize = input[0].length;
+        int outputSize = (inputSize - filterSize) / stride + 1;
+
+        if (filters[0] == null || filters[0].length != inputDepth) {
+            initializeFilters(inputDepth);
+        }
+
+        double[][][] output = new double[numFilters][outputSize][outputSize];
+        this.activatedOutput = new double[numFilters][outputSize][outputSize];
+
+        for (int f = 0; f < numFilters; f++) {
+            for (int i = 0; i < outputSize; i++) {
+                for (int j = 0; j < outputSize; j++) {
+                    int x = i * stride;
+                    int y = j * stride;
+                    double sum = 0;
+                    for (int d = 0; d < inputDepth; d++) {
+                        sum += MatrixUtils.applyFilter(input[d], filters[f][d], x, y);
+                    }
+                    output[f][i][j] = sum + biases[f];
+                    activatedOutput[f][i][j] = activationFunction.activate(output[f][i][j]);
+                }
+            }
+        }
+        return activatedOutput;
     }
 
     @Override
     public double[][][] backward(double[][][] gradient) {
-        return new double[0][][];
+        int inputDepth = input.length;
+        int inputSize = input[0].length;
+        int outputSize = activatedOutput[0].length;
+        double[][][] inputGradient = new double[inputDepth][inputSize][inputSize];
+        double[][][][] filterGradient = new double[numFilters][inputDepth][filterSize][filterSize];
+        double[] biasGradient = new double[numFilters];
+
+        // Обратное распространение через активационные функции
+        for (int f = 0; f < numFilters; f++) {
+            for (int i = 0; i < outputSize; i++) {
+                for (int j = 0; j < outputSize; j++) {
+                    gradient[f][i][j] *= activationFunction.derivative(activatedOutput[f][i][j]);
+                }
+            }
+        }
+
+        // Вычисление градиента для фильтров и входов
+        for (int f = 0; f < numFilters; f++) {
+            for (int i = 0; i < outputSize; i++) {
+                for (int j = 0; j < outputSize; j++) {
+                    int x = i * stride;
+                    int y = j * stride;
+                    for (int d = 0; d < inputDepth; d++) {
+                        for (int k = 0; k < filterSize; k++) {
+                            for (int l = 0; l < filterSize; l++) {
+                                filterGradient[f][d][k][l] += input[d][x + k][y + l] * gradient[f][i][j];
+                                inputGradient[d][x + k][y + l] += filters[f][d][k][l] * gradient[f][i][j];
+                            }
+                        }
+                    }
+                    biasGradient[f] += gradient[f][i][j];
+                }
+            }
+        }
+
+        // Обновление параметров
+        for (int f = 0; f < numFilters; f++) {
+            for (int d = 0; d < inputDepth; d++) {
+                for (int k = 0; k < filterSize; k++) {
+                    for (int l = 0; l < filterSize; l++) {
+                        filters[f][d][k][l] -= config.getLearningRate() * filterGradient[f][d][k][l];
+                    }
+                }
+            }
+            biases[f] -= config.getLearningRate() * biasGradient[f];
+        }
+
+        return inputGradient;
     }
 }

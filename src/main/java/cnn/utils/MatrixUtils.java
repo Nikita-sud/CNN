@@ -2,26 +2,20 @@ package cnn.utils;
 
 public class MatrixUtils {
 
-    public static double[][] convolve(double[][] input, double[][] filter) {
-        int inputSize = input.length;
+    // Свёртка с учетом stride
+    public static double applyFilter(double[][] input, double[][] filter, int startX, int startY) {
         int filterSize = filter.length;
-        int outputSize = inputSize - filterSize + 1;
-        double[][] output = new double[outputSize][outputSize];
+        double sum = 0;
 
-        for (int i = 0; i < outputSize; i++) {
-            for (int j = 0; j < outputSize; j++) {
-                double sum = 0;
-                for (int k = 0; k < filterSize; k++) {
-                    for (int l = 0; l < filterSize; l++) {
-                        sum += input[i + k][j + l] * filter[k][l];
-                    }
-                }
-                output[i][j] = sum;
+        for (int i = 0; i < filterSize; i++) {
+            for (int j = 0; j < filterSize; j++) {
+                sum += input[startX + i][startY + j] * filter[i][j];
             }
         }
-        return output;
+        return sum;
     }
 
+    // Подвыборка (Pooling)
     public static double[][] maxPooling(double[][] input, int poolSize) {
         int inputSize = input.length;
         int outputSize = inputSize / poolSize;
@@ -43,6 +37,7 @@ public class MatrixUtils {
         return output;
     }
 
+    // Перемножение матриц
     public static double[] multiply(double[] input, double[][] weights, double[] biases) {
         int inputSize = input.length;
         int outputSize = biases.length;
@@ -58,6 +53,7 @@ public class MatrixUtils {
         return output;
     }
 
+    // Обратная свёртка
     public static double[][] convolveBackward(double[][] input, double[][] filter) {
         int inputSize = input.length;
         int filterSize = filter.length;
@@ -76,6 +72,7 @@ public class MatrixUtils {
         return output;
     }
 
+    // Flattening
     public static double[] flatten(double[][][] input) {
         int depth = input.length;
         int height = input[0].length;
@@ -93,6 +90,7 @@ public class MatrixUtils {
         return flattened;
     }
 
+    // Unflattening
     public static double[][][] unflatten(double[] input, int depth, int height, int width) {
         double[][][] unflattened = new double[depth][height][width];
         
