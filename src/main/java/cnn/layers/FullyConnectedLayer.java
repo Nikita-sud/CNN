@@ -50,6 +50,12 @@ public class FullyConnectedLayer implements Layer {
     public double[][][] backward(double[][][] gradient) {
         double[] postActivationGradient = gradient[0][0];
         double[] preActivationGradient = new double[outputSize];
+        
+        // Убедитесь, что размерности совпадают
+        if (postActivationGradient.length != outputSize) {
+            throw new IllegalArgumentException("Size of gradient does not match output size");
+        }
+        
         for (int i = 0; i < outputSize; i++) {
             preActivationGradient[i] = postActivationGradient[i] * activationFunction.derivative(input[i]);
         }

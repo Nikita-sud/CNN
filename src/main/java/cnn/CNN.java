@@ -34,4 +34,8 @@ public class CNN {
         }
         return grad;
     }
+
+    public TrainingConfig getConfig() {
+        return config;
+    }
 }
