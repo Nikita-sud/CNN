@@ -37,6 +37,32 @@ public class MatrixUtils {
         return output;
     }
 
+    public static double[][] maxPoolingBackward(double[][] input, double[][] gradient, int poolSize) {
+        int inputSize = input.length;
+        int outputSize = inputSize / poolSize;
+        double[][] inputGradient = new double[inputSize][inputSize];
+
+        for (int i = 0; i < outputSize; i++) {
+            for (int j = 0; j < outputSize; j++) {
+                double max = input[i * poolSize][j * poolSize];
+                int maxX = i * poolSize;
+                int maxY = j * poolSize;
+                for (int k = 0; k < poolSize; k++) {
+                    for (int l = 0; l < poolSize; l++) {
+                        if (input[i * poolSize + k][j * poolSize + l] > max) {
+                            max = input[i * poolSize + k][j * poolSize + l];
+                            maxX = i * poolSize + k;
+                            maxY = j * poolSize + l;
+                        }
+                    }
+                }
+                inputGradient[maxX][maxY] = gradient[i][j];
+            }
+        }
+
+        return inputGradient;
+    }
+
     // Перемножение матриц
     public static double[] multiply(double[] input, double[][] weights, double[] biases) {
         int inputSize = input.length;

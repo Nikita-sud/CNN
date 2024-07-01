@@ -1,7 +1,6 @@
 package cnn;
 
 import java.util.List;
-
 import cnn.utils.ImageData;
 
 public class CNNTrainer {
@@ -35,11 +34,11 @@ public class CNNTrainer {
         }
     }
 
-    // Метод для вычисления функции потерь (например, среднеквадратичная ошибка)
+    // Метод для вычисления функции потерь (кросс-энтропийная ошибка)
     private double computeLoss(double[] output, double[] target) {
         double loss = 0;
         for (int i = 0; i < output.length; i++) {
-            loss += Math.pow(output[i] - target[i], 2);
+            loss -= target[i] * Math.log(output[i]);
         }
         return loss / output.length;
     }
@@ -48,7 +47,7 @@ public class CNNTrainer {
     private double[][][] computeLossGradient(double[] output, double[] target) {
         double[][][] gradient = new double[1][1][output.length];
         for (int i = 0; i < output.length; i++) {
-            gradient[0][0][i] = 2 * (output[i] - target[i]) / output.length;
+            gradient[0][0][i] = output[i] - target[i];
         }
         return gradient;
     }

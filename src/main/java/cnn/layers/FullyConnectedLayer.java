@@ -4,13 +4,15 @@ import cnn.interfaces.Layer;
 import cnn.utils.MatrixUtils;
 import cnn.interfaces.ActivationFunction;
 import cnn.utils.TrainingConfig;
+import cnn.utils.Softmax;
+import java.util.Random;
 
 public class FullyConnectedLayer implements Layer {
     private int inputSize;
     private int outputSize;
     private double[][] weights;
     private double[] biases;
-    private double[] input;
+    private double[][][] input;  // Изменено для хранения оригинальных входных данных
     private ActivationFunction activationFunction;
     private TrainingConfig config;
 
@@ -25,54 +27,61 @@ public class FullyConnectedLayer implements Layer {
     }
 
     private void initializeWeights() {
+        Random rand = new Random();
         for (int i = 0; i < inputSize; i++) {
             for (int j = 0; j < outputSize; j++) {
-                weights[i][j] = Math.random();
+                weights[i][j] = rand.nextGaussian() * Math.sqrt(2.0 / inputSize); // улучшенная инициализация весов
             }
         }
         for (int j = 0; j < outputSize; j++) {
-            biases[j] = Math.random();
+            biases[j] = 0.0; // начнем с нулевых смещений
         }
     }
 
     @Override
     public double[][][] forward(double[][][] input) {
-        this.input = MatrixUtils.flatten(input);
-        double[] preActivation = MatrixUtils.multiply(this.input, weights, biases);
-        double[] postActivation = new double[outputSize];
-        for (int i = 0; i < outputSize; i++) {
-            postActivation[i] = activationFunction.activate(preActivation[i]);
+        this.input = input; // Сохраняем оригинальные входные данные
+        double[] flattenedInput = MatrixUtils.flatten(input);
+        double[] preActivation = MatrixUtils.multiply(flattenedInput, weights, biases);
+        double[] postActivation;
+        if (activationFunction instanceof Softmax) {
+            postActivation = ((Softmax) activationFunction).activate(preActivation);
+        } else {
+            postActivation = new double[outputSize];
+            for (int i = 0; i < outputSize; i++) {
+                postActivation[i] = activationFunction.activate(preActivation[i]);
+            }
         }
         return new double[][][] { { postActivation } };
     }
 
     @Override
     public double[][][] backward(double[][][] gradient) {
-        double[] postActivationGradient = gradient[0][0];
+        double[] postActivationGradient = MatrixUtils.flatten(gradient); // Используем flatten для преобразования градиентов в одномерный массив
         double[] preActivationGradient = new double[outputSize];
-        
-        // Убедитесь, что размерности совпадают
-        if (postActivationGradient.length != outputSize) {
-            throw new IllegalArgumentException("Size of gradient does not match output size");
-        }
-        
-        for (int i = 0; i < outputSize; i++) {
-            preActivationGradient[i] = postActivationGradient[i] * activationFunction.derivative(input[i]);
+
+        // Используем градиенты Softmax + кросс-энтропия
+        if (activationFunction instanceof Softmax) {
+            preActivationGradient = postActivationGradient; // Softmax + cross-entropy simplification
+        } else {
+            for (int i = 0; i < outputSize; i++) {
+                preActivationGradient[i] = postActivationGradient[i] * activationFunction.derivative(preActivationGradient[i]);
+            }
         }
 
-        double[] inputGradient = new double[inputSize];
-        double[][] weightGradient = new double[inputSize][outputSize];
+        double[] inputGradient = new double[MatrixUtils.flatten(input).length];
+        double[][] weightGradient = new double[input.length][outputSize];
         double[] biasGradient = new double[outputSize];
 
         for (int j = 0; j < outputSize; j++) {
-            for (int i = 0; i < inputSize; i++) {
+            for (int i = 0; i < input.length; i++) {
                 inputGradient[i] += preActivationGradient[j] * weights[i][j];
-                weightGradient[i][j] += preActivationGradient[j] * input[i];
+                weightGradient[i][j] += preActivationGradient[j] * MatrixUtils.flatten(input)[i];
             }
             biasGradient[j] += preActivationGradient[j];
         }
 
-        for (int i = 0; i < inputSize; i++) {
+        for (int i = 0; i < input.length; i++) {
             for (int j = 0; j < outputSize; j++) {
                 weights[i][j] -= config.getLearningRate() * weightGradient[i][j];
             }
@@ -81,11 +90,6 @@ public class FullyConnectedLayer implements Layer {
             biases[j] -= config.getLearningRate() * biasGradient[j];
         }
 
-        int depth = 1;
-        int height = (int) Math.sqrt(inputSize);
-        int width = height;
-        double[][][] reshapedInputGradient = MatrixUtils.unflatten(inputGradient, depth, height, width);
-
-        return reshapedInputGradient;
+        return MatrixUtils.unflatten(inputGradient, input.length, input[0].length, input[0][0].length);
     }
 }

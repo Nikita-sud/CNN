@@ -5,8 +5,8 @@ import cnn.layers.FullyConnectedLayer;
 import cnn.layers.PoolingLayer;
 import cnn.utils.ImageData;
 import cnn.utils.ReLU;
-import cnn.utils.Sigmoid;
 import cnn.utils.TrainingConfig;
+import cnn.utils.Softmax;
 
 import java.io.IOException;
 import java.util.List;
@@ -19,7 +19,7 @@ public class Main {
         cnn.addLayer(new ConvolutionalLayer(3, 8, new ReLU(), config));
         cnn.addLayer(new PoolingLayer(2));
         cnn.addLayer(new FullyConnectedLayer(1352, 10, new ReLU(), config)); // Пример использования ReLU
-        cnn.addLayer(new FullyConnectedLayer(10, 1, new Sigmoid(), config)); // Пример использования Sigmoid
+        cnn.addLayer(new FullyConnectedLayer(10, 10, new Softmax(), config)); // Пример использования Softmax
 
         // Чтение данных MNIST
         String imagesFile = "data/train-images.idx3-ubyte";
