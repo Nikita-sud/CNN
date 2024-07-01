@@ -64,24 +64,26 @@ public class FullyConnectedLayer implements Layer {
         if (activationFunction instanceof Softmax) {
             preActivationGradient = postActivationGradient; // Softmax + cross-entropy simplification
         } else {
+            double[] flatInput = MatrixUtils.flatten(input);
             for (int i = 0; i < outputSize; i++) {
-                preActivationGradient[i] = postActivationGradient[i] * activationFunction.derivative(preActivationGradient[i]);
+                preActivationGradient[i] = postActivationGradient[i] * activationFunction.derivative(flatInput[i]);
             }
         }
 
-        double[] inputGradient = new double[MatrixUtils.flatten(input).length];
-        double[][] weightGradient = new double[input.length][outputSize];
+        double[] flatInput = MatrixUtils.flatten(input);
+        double[] inputGradient = new double[flatInput.length];
+        double[][] weightGradient = new double[inputSize][outputSize];
         double[] biasGradient = new double[outputSize];
 
         for (int j = 0; j < outputSize; j++) {
-            for (int i = 0; i < input.length; i++) {
+            for (int i = 0; i < inputSize; i++) {
                 inputGradient[i] += preActivationGradient[j] * weights[i][j];
-                weightGradient[i][j] += preActivationGradient[j] * MatrixUtils.flatten(input)[i];
+                weightGradient[i][j] += preActivationGradient[j] * flatInput[i];
             }
             biasGradient[j] += preActivationGradient[j];
         }
 
-        for (int i = 0; i < input.length; i++) {
+        for (int i = 0; i < inputSize; i++) {
             for (int j = 0; j < outputSize; j++) {
                 weights[i][j] -= config.getLearningRate() * weightGradient[i][j];
             }

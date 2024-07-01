@@ -22,16 +22,20 @@ public class Main {
         cnn.addLayer(new FullyConnectedLayer(10, 10, new Softmax(), config)); // Пример использования Softmax
 
         // Чтение данных MNIST
-        String imagesFile = "data/train-images.idx3-ubyte";
-        String labelsFile = "data/train-labels.idx1-ubyte";
-        List<ImageData> dataset = MNISTReader.readMNISTData(imagesFile, labelsFile);
+        String trainImagesFile = "data/train-images.idx3-ubyte";
+        String trainLabelsFile = "data/train-labels.idx1-ubyte";
+        List<ImageData> trainDataset = MNISTReader.readMNISTData(trainImagesFile, trainLabelsFile);
+
+        String testImagesFile = "data/t10k-images.idx3-ubyte";
+        String testLabelsFile = "data/t10k-labels.idx1-ubyte";
+        List<ImageData> testDataset = MNISTReader.readMNISTData(testImagesFile, testLabelsFile);
 
         // Создание и запуск тренера
         CNNTrainer trainer = new CNNTrainer(cnn);
-        trainer.train(dataset, 10); // 10 эпох
+        trainer.train(trainDataset, testDataset, 10); // 10 эпох
 
         // Пример использования с тестовым изображением после обучения
-        double[][][] input = dataset.get(0).imageData;
+        double[][][] input = testDataset.get(0).imageData;
         double[][][] output = cnn.forward(input);
 
         // Вывод результата

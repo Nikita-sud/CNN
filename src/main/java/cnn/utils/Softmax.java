@@ -1,7 +1,7 @@
 package cnn.utils;
 
 import cnn.interfaces.ActivationFunction;
-import java.util.Arrays;
+// import java.util.Arrays;
 
 public class Softmax implements ActivationFunction {
     @Override
@@ -37,7 +37,7 @@ public class Softmax implements ActivationFunction {
             output[i] /= sum;
         }
 
-        System.out.println("Softmax output: " + Arrays.toString(output));
+        // System.out.println("Softmax output: " + Arrays.toString(output));
 
         return output;
     }
