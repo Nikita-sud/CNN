@@ -1,8 +1,10 @@
 package cnn;
 
 import java.util.List;
+import java.util.Collections;
 
 import cnn.utils.ImageData;
+import cnn.utils.MatrixUtils;
 
 public class CNNTrainer {
     private CNN cnn;
@@ -12,25 +14,42 @@ public class CNNTrainer {
     }
 
     // Метод для обучения
-    public void train(List<ImageData> trainDataset, List<ImageData> testDataset, int epochs) {
+    public void train(List<ImageData> trainDataset, List<ImageData> testDataset, int epochs, int batchSize) {
         for (int epoch = 0; epoch < epochs; epoch++) {
+            Collections.shuffle(trainDataset); // Перемешивание данных для каждой эпохи
             double totalLoss = 0;
-            for (ImageData data : trainDataset) {
-                // Прямой проход
-                double[][][] output = cnn.forward(data.imageData);
+            @SuppressWarnings("unused")
+            int batchCount = 0;
 
-                // Вычисление потерь
-                double loss = computeLoss(output[0][0], data.label);
-                totalLoss += loss;
+            for (int batchStart = 0; batchStart < trainDataset.size(); batchStart += batchSize) {
+                int batchEnd = Math.min(batchStart + batchSize, trainDataset.size());
+                List<ImageData> miniBatch = trainDataset.subList(batchStart, batchEnd);
 
-                // Вычисление градиента функции потерь
-                double[][][] lossGradient = computeLossGradient(output[0][0], data.label);
+                double[][][] accumulatedGradient = null;
+                for (ImageData data : miniBatch) {
+                    // Прямой проход
+                    double[][][] output = cnn.forward(data.imageData);
 
-                // Обратное распространение
-                cnn.backward(lossGradient);
+                    // Вычисление потерь
+                    double loss = computeLoss(output[0][0], data.label);
+                    totalLoss += loss;
 
-                // Обновление весов будет происходить внутри слоев во время обратного прохода
+                    // Вычисление градиента функции потерь
+                    double[][][] lossGradient = computeLossGradient(output[0][0], data.label);
+
+                    // Накопление градиентов
+                    if (accumulatedGradient == null) {
+                        accumulatedGradient = lossGradient;
+                    } else {
+                        accumulatedGradient = MatrixUtils.add(accumulatedGradient, lossGradient);
+                    }
+                }
+
+                // Обновление весов по накопленному градиенту среднего значения
+                cnn.backward(MatrixUtils.divide(accumulatedGradient, miniBatch.size()));
+                batchCount++;
             }
+
             double averageLoss = totalLoss / trainDataset.size();
             double accuracy = evaluateAccuracy(cnn, testDataset);
             System.out.println("Epoch " + (epoch + 1) + ", Loss: " + averageLoss + ", Accuracy: " + accuracy);

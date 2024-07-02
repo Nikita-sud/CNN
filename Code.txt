@@ -1,0 +1,860 @@
+package cnn.interfaces;
+
+public interface ActivationFunction {
+    double activate(double x);
+    double derivative(double x);
+    
+    default double[] activate(double[] input) {
+        double[] output = new double[input.length];
+        for (int i = 0; i < input.length; i++) {
+            output[i] = activate(input[i]);
+        }
+        return output;
+    }
+}
+package cnn.interfaces;
+
+public interface Layer {
+    double[][][] forward(double[][][] input);
+    double[][][] backward(double[][][] gradient);
+}
+package cnn.layers;
+
+import cnn.interfaces.Layer;
+import cnn.utils.MatrixUtils;
+import cnn.utils.ReLU;
+import cnn.utils.TrainingConfig;
+import cnn.interfaces.ActivationFunction;
+
+public class ConvolutionalLayer implements Layer {
+    private int filterSize;
+    private int numFilters;
+    private int stride;
+    private double[][][][] filters;
+    private double[] biases;
+    private double[][][] input;
+    private double[][][] activatedOutput;
+    private ActivationFunction activationFunction;
+    private TrainingConfig config;
+
+    public ConvolutionalLayer(int filterSize, int numFilters, int stride, ActivationFunction activationFunction, TrainingConfig config) {
+        this.filterSize = filterSize;
+        this.numFilters = numFilters;
+        this.stride = stride;
+        this.filters = new double[numFilters][][][];
+        this.biases = new double[numFilters];
+        this.activationFunction = activationFunction;
+        this.config = config;
+        initializeBiases();
+    }
+
+    public ConvolutionalLayer(int filterSize, int numFilters, ActivationFunction activationFunction, TrainingConfig config) {
+        this(filterSize, numFilters, 1, activationFunction, config);
+    }
+
+    public ConvolutionalLayer(int filterSize, int numFilters, TrainingConfig config) {
+        this(filterSize, numFilters, 1, new ReLU(), config);
+    }
+
+    private void initializeFilters(int inputDepth) {
+        for (int f = 0; f < numFilters; f++) {
+            filters[f] = new double[inputDepth][filterSize][filterSize];
+            for (int d = 0; d < inputDepth; d++) {
+                for (int i = 0; i < filterSize; i++) {
+                    for (int j = 0; j < filterSize; j++) {
+                        filters[f][d][i][j] = Math.random();
+                    }
+                }
+            }
+        }
+    }
+
+    private void initializeBiases() {
+        for (int i = 0; i < numFilters; i++) {
+            biases[i] = Math.random();
+        }
+    }
+
+    @Override
+    public double[][][] forward(double[][][] input) {
+        this.input = input;
+        int inputDepth = input.length;
+        int inputSize = input[0].length;
+        int outputSize = (inputSize - filterSize) / stride + 1;
+
+        if (filters[0] == null || filters[0].length != inputDepth) {
+            initializeFilters(inputDepth);
+        }
+
+        double[][][] output = new double[numFilters][outputSize][outputSize];
+        this.activatedOutput = new double[numFilters][outputSize][outputSize];
+
+        for (int f = 0; f < numFilters; f++) {
+            for (int i = 0; i < outputSize; i++) {
+                for (int j = 0; j < outputSize; j++) {
+                    int x = i * stride;
+                    int y = j * stride;
+                    double sum = 0;
+                    for (int d = 0; d < inputDepth; d++) {
+                        sum += MatrixUtils.applyFilter(input[d], filters[f][d], x, y);
+                    }
+                    output[f][i][j] = sum + biases[f];
+                    activatedOutput[f][i][j] = activationFunction.activate(output[f][i][j]);
+                }
+            }
+        }
+        return activatedOutput;
+    }
+
+    @Override
+    public double[][][] backward(double[][][] gradient) {
+        int inputDepth = input.length;
+        int inputSize = input[0].length;
+        int outputSize = activatedOutput[0].length;
+        double[][][] inputGradient = new double[inputDepth][inputSize][inputSize];
+        double[][][][] filterGradient = new double[numFilters][inputDepth][filterSize][filterSize];
+        double[] biasGradient = new double[numFilters];
+
+        // Обратное распространение через активационные функции
+        for (int f = 0; f < numFilters; f++) {
+            for (int i = 0; i < outputSize; i++) {
+                for (int j = 0; j < outputSize; j++) {
+                    gradient[f][i][j] *= activationFunction.derivative(activatedOutput[f][i][j]);
+                }
+            }
+        }
+
+        // Вычисление градиента для фильтров и входов
+        for (int f = 0; f < numFilters; f++) {
+            for (int i = 0; i < outputSize; i++) {
+                for (int j = 0; j < outputSize; j++) {
+                    int x = i * stride;
+                    int y = j * stride;
+                    for (int d = 0; d < inputDepth; d++) {
+                        for (int k = 0; k < filterSize; k++) {
+                            for (int l = 0; l < filterSize; l++) {
+                                filterGradient[f][d][k][l] += input[d][x + k][y + l] * gradient[f][i][j];
+                                inputGradient[d][x + k][y + l] += filters[f][d][k][l] * gradient[f][i][j];
+                            }
+                        }
+                    }
+                    biasGradient[f] += gradient[f][i][j];
+                }
+            }
+        }
+
+        // Обновление параметров
+        for (int f = 0; f < numFilters; f++) {
+            for (int d = 0; d < inputDepth; d++) {
+                for (int k = 0; k < filterSize; k++) {
+                    for (int l = 0; l < filterSize; l++) {
+                        filters[f][d][k][l] -= config.getLearningRate() * filterGradient[f][d][k][l];
+                    }
+                }
+            }
+            biases[f] -= config.getLearningRate() * biasGradient[f];
+        }
+
+        return inputGradient;
+    }
+}
+package cnn.layers;
+
+import cnn.interfaces.Layer;
+import cnn.utils.MatrixUtils;
+import cnn.interfaces.ActivationFunction;
+import cnn.utils.TrainingConfig;
+import cnn.utils.Softmax;
+import java.util.Random;
+
+public class FullyConnectedLayer implements Layer {
+    private int inputSize;
+    private int outputSize;
+    private double[][] weights;
+    private double[] biases;
+    private double[][][] input;  // Изменено для хранения оригинальных входных данных
+    private ActivationFunction activationFunction;
+    private TrainingConfig config;
+
+    public FullyConnectedLayer(int inputSize, int outputSize, ActivationFunction activationFunction, TrainingConfig config) {
+        this.inputSize = inputSize;
+        this.outputSize = outputSize;
+        this.weights = new double[inputSize][outputSize];
+        this.biases = new double[outputSize];
+        this.activationFunction = activationFunction;
+        this.config = config;
+        initializeWeights();
+    }
+
+    private void initializeWeights() {
+        Random rand = new Random();
+        for (int i = 0; i < inputSize; i++) {
+            for (int j = 0; j < outputSize; j++) {
+                weights[i][j] = rand.nextGaussian() * Math.sqrt(2.0 / inputSize); // улучшенная инициализация весов
+            }
+        }
+        for (int j = 0; j < outputSize; j++) {
+            biases[j] = 0.0; // начнем с нулевых смещений
+        }
+    }
+
+    @Override
+    public double[][][] forward(double[][][] input) {
+        this.input = input; // Сохраняем оригинальные входные данные
+        double[] flattenedInput = MatrixUtils.flatten(input);
+        double[] preActivation = MatrixUtils.multiply(flattenedInput, weights, biases);
+        double[] postActivation;
+        if (activationFunction instanceof Softmax) {
+            postActivation = ((Softmax) activationFunction).activate(preActivation);
+        } else {
+            postActivation = new double[outputSize];
+            for (int i = 0; i < outputSize; i++) {
+                postActivation[i] = activationFunction.activate(preActivation[i]);
+            }
+        }
+        return new double[][][] { { postActivation } };
+    }
+
+    @Override
+    public double[][][] backward(double[][][] gradient) {
+        double[] postActivationGradient = MatrixUtils.flatten(gradient); // Используем flatten для преобразования градиентов в одномерный массив
+        double[] preActivationGradient = new double[outputSize];
+
+        // Используем градиенты Softmax + кросс-энтропия
+        if (activationFunction instanceof Softmax) {
+            preActivationGradient = postActivationGradient; // Softmax + cross-entropy simplification
+        } else {
+            double[] flatInput = MatrixUtils.flatten(input);
+            for (int i = 0; i < outputSize; i++) {
+                preActivationGradient[i] = postActivationGradient[i] * activationFunction.derivative(flatInput[i]);
+            }
+        }
+
+        double[] flatInput = MatrixUtils.flatten(input);
+        double[] inputGradient = new double[flatInput.length];
+        double[][] weightGradient = new double[inputSize][outputSize];
+        double[] biasGradient = new double[outputSize];
+
+        for (int j = 0; j < outputSize; j++) {
+            for (int i = 0; i < inputSize; i++) {
+                inputGradient[i] += preActivationGradient[j] * weights[i][j];
+                weightGradient[i][j] += preActivationGradient[j] * flatInput[i];
+            }
+            biasGradient[j] += preActivationGradient[j];
+        }
+
+        for (int i = 0; i < inputSize; i++) {
+            for (int j = 0; j < outputSize; j++) {
+                weights[i][j] -= config.getLearningRate() * weightGradient[i][j];
+            }
+        }
+        for (int j = 0; j < outputSize; j++) {
+            biases[j] -= config.getLearningRate() * biasGradient[j];
+        }
+
+        return MatrixUtils.unflatten(inputGradient, input.length, input[0].length, input[0][0].length);
+    }
+}
+package cnn.layers;
+
+import cnn.interfaces.Layer;
+import cnn.utils.MatrixUtils;
+import cnn.utils.TrainingConfig;
+
+public class PoolingLayer implements Layer {
+    private int poolSize;
+    private double[][][] input;
+    @SuppressWarnings("unused")
+    private TrainingConfig config;
+
+    public PoolingLayer(int poolSize) {
+        this.poolSize = poolSize;
+    }
+
+    @Override
+    public double[][][] forward(double[][][] input) {
+        this.input = input;
+        int inputDepth = input.length;
+        int inputSize = input[0].length;
+        int outputSize = inputSize / poolSize;
+
+        double[][][] output = new double[inputDepth][outputSize][outputSize];
+
+        for (int d = 0; d < inputDepth; d++) {
+            output[d] = MatrixUtils.maxPooling(input[d], poolSize);
+        }
+
+        return output;
+    }
+
+    @Override
+    public double[][][] backward(double[][][] gradient) {
+        int inputDepth = input.length;
+        int inputSize = input[0].length;
+        int outputSize = gradient[0].length;
+        double[][][] inputGradient = new double[inputDepth][inputSize][inputSize];
+
+        for (int d = 0; d < inputDepth; d++) {
+            for (int i = 0; i < outputSize; i++) {
+                for (int j = 0; j < outputSize; j++) {
+                    int x = i * poolSize;
+                    int y = j * poolSize;
+                    double maxVal = input[d][x][y];
+                    int maxI = x, maxJ = y;
+                    for (int k = 0; k < poolSize; k++) {
+                        for (int l = 0; l < poolSize; l++) {
+                            if (input[d][x + k][y + l] > maxVal) {
+                                maxVal = input[d][x + k][y + l];
+                                maxI = x + k;
+                                maxJ = y + l;
+                            }
+                        }
+                    }
+                    inputGradient[d][maxI][maxJ] = gradient[d][i][j];
+                }
+            }
+        }
+        return inputGradient;
+    }
+}
+package cnn.utils;
+
+public class ImageData {
+    public double[][][] imageData;
+    public double[] label;
+
+    public ImageData(double[][][] imageData, double[] label) {
+        this.imageData = imageData;
+        this.label = label;
+    }
+
+    public double[][][] getImageData() {
+        return imageData;
+    }
+
+    public double[] getLabel() {
+        return label;
+    }
+}
+package cnn.utils;
+
+public class MatrixUtils {
+
+    public static double applyFilter(double[][] input, double[][] filter, int startX, int startY) {
+        int filterSize = filter.length;
+        double sum = 0;
+
+        for (int i = 0; i < filterSize; i++) {
+            for (int j = 0; j < filterSize; j++) {
+                sum += input[startX + i][startY + j] * filter[i][j];
+            }
+        }
+        return sum;
+    }
+
+    public static double[][] maxPooling(double[][] input, int poolSize) {
+        int inputSize = input.length;
+        int outputSize = inputSize / poolSize;
+        double[][] output = new double[outputSize][outputSize];
+
+        for (int i = 0; i < outputSize; i++) {
+            for (int j = 0; j < outputSize; j++) {
+                double max = input[i * poolSize][j * poolSize];
+                for (int k = 0; k < poolSize; k++) {
+                    for (int l = 0; l < poolSize; l++) {
+                        if (input[i * poolSize + k][j * poolSize + l] > max) {
+                            max = input[i * poolSize + k][j * poolSize + l];
+                        }
+                    }
+                }
+                output[i][j] = max;
+            }
+        }
+        return output;
+    }
+
+    public static double[][] maxPoolingBackward(double[][] input, double[][] gradient, int poolSize) {
+        int inputSize = input.length;
+        int outputSize = inputSize / poolSize;
+        double[][] inputGradient = new double[inputSize][inputSize];
+
+        for (int i = 0; i < outputSize; i++) {
+            for (int j = 0; j < outputSize; j++) {
+                double max = input[i * poolSize][j * poolSize];
+                int maxX = i * poolSize;
+                int maxY = j * poolSize;
+                for (int k = 0; k < poolSize; k++) {
+                    for (int l = 0; l < poolSize; l++) {
+                        if (input[i * poolSize + k][j * poolSize + l] > max) {
+                            max = input[i * poolSize + k][j * poolSize + l];
+                            maxX = i * poolSize + k;
+                            maxY = j * poolSize + l;
+                        }
+                    }
+                }
+                inputGradient[maxX][maxY] = gradient[i][j];
+            }
+        }
+
+        return inputGradient;
+    }
+
+    // Перемножение матриц
+    public static double[] multiply(double[] input, double[][] weights, double[] biases) {
+        int inputSize = input.length;
+        int outputSize = biases.length;
+        double[] output = new double[outputSize];
+
+        for (int j = 0; j < outputSize; j++) {
+            double sum = biases[j];
+            for (int i = 0; i < inputSize; i++) {
+                sum += input[i] * weights[i][j];
+            }
+            output[j] = sum;
+        }
+        return output;
+    }
+
+    // Addition of two matrices
+    public static double[][][] add(double[][][] a, double[][][] b) {
+        int depth = a.length;
+        int height = a[0].length;
+        int width = a[0][0].length;
+        double[][][] result = new double[depth][height][width];
+        for (int d = 0; d < depth; d++) {
+            for (int h = 0; h < height; h++) {
+                for (int w = 0; w < width; w++) {
+                    result[d][h][w] = a[d][h][w] + b[d][h][w];
+                }
+            }
+        }
+        return result;
+    }
+
+    // Division of a matrix by a scalar
+    public static double[][][] divide(double[][][] a, double scalar) {
+        int depth = a.length;
+        int height = a[0].length;
+        int width = a[0][0].length;
+        double[][][] result = new double[depth][height][width];
+        for (int d = 0; d < depth; d++) {
+            for (int h = 0; h < height; h++) {
+                for (int w = 0; w < width; w++) {
+                    result[d][h][w] = a[d][h][w] / scalar;
+                }
+            }
+        }
+        return result;
+    }
+
+    // Обратная свёртка
+    public static double[][] convolveBackward(double[][] input, double[][] filter) {
+        int inputSize = input.length;
+        int filterSize = filter.length;
+        int outputSize = inputSize + filterSize - 1;
+        double[][] output = new double[outputSize][outputSize];
+
+        for (int i = 0; i < inputSize; i++) {
+            for (int j = 0; j < inputSize; j++) {
+                for (int k = 0; k < filterSize; k++) {
+                    for (int l = 0; l < filterSize; l++) {
+                        output[i + k][j + l] += input[i][j] * filter[k][l];
+                    }
+                }
+            }
+        }
+        return output;
+    }
+
+    // Flattening
+    public static double[] flatten(double[][][] input) {
+        int depth = input.length;
+        int height = input[0].length;
+        int width = input[0][0].length;
+        double[] flattened = new double[depth * height * width];
+        
+        int index = 0;
+        for (int d = 0; d < depth; d++) {
+            for (int h = 0; h < height; h++) {
+                for (int w = 0; w < width; w++) {
+                    flattened[index++] = input[d][h][w];
+                }
+            }
+        }
+        return flattened;
+    }
+
+    // Unflattening
+    public static double[][][] unflatten(double[] input, int depth, int height, int width) {
+        double[][][] unflattened = new double[depth][height][width];
+        
+        int index = 0;
+        for (int d = 0; d < depth; d++) {
+            for (int h = 0; h < height; h++) {
+                for (int w = 0; w < width; w++) {
+                    unflattened[d][h][w] = input[index++];
+                }
+            }
+        }
+        return unflattened;
+    }
+}
+package cnn.utils;
+
+import cnn.interfaces.ActivationFunction;
+
+public class ReLU implements ActivationFunction {
+    @Override
+    public double activate(double x) {
+        return Math.max(0, x);
+    }
+
+    @Override
+    public double derivative(double x) {
+        return x > 0 ? 1 : 0;
+    }
+}
+package cnn.utils;
+
+import cnn.interfaces.ActivationFunction;
+
+public class Sigmoid implements ActivationFunction {
+    @Override
+    public double activate(double x) {
+        return 1 / (1 + Math.exp(-x));
+    }
+
+    @Override
+    public double derivative(double x) {
+        double sigmoid = activate(x);
+        return sigmoid * (1 - sigmoid);
+    }
+}
+package cnn.utils;
+
+import cnn.interfaces.ActivationFunction;
+// import java.util.Arrays;
+
+public class Softmax implements ActivationFunction {
+    @Override
+    public double activate(double x) {
+        // Softmax не применяется по одному элементу, поэтому этот метод не используется
+        throw new UnsupportedOperationException("Use the activate(double[] input) method for Softmax.");
+    }
+
+    @Override
+    public double derivative(double x) {
+        // Производная Softmax не применяется по одному элементу, поэтому этот метод не используется
+        throw new UnsupportedOperationException("Use the derivative(double[] output, double[] target) method for Softmax.");
+    }
+
+    @Override
+    public double[] activate(double[] input) {
+        double[] output = new double[input.length];
+        double max = Double.NEGATIVE_INFINITY;
+        
+        for (double v : input) {
+            if (v > max) {
+                max = v;
+            }
+        }
+
+        double sum = 0.0;
+        for (int i = 0; i < input.length; i++) {
+            output[i] = Math.exp(input[i] - max);
+            sum += output[i];
+        }
+
+        for (int i = 0; i < input.length; i++) {
+            output[i] /= sum;
+        }
+
+        // System.out.println("Softmax output: " + Arrays.toString(output));
+
+        return output;
+    }
+
+    public double[] derivative(double[] output, double[] target) {
+        double[] gradient = new double[output.length];
+        for (int i = 0; i < output.length; i++) {
+            gradient[i] = output[i] - target[i];
+        }
+        return gradient;
+    }
+}
+package cnn.utils;
+
+import cnn.interfaces.ActivationFunction;
+
+public class Tanh implements ActivationFunction {
+    @Override
+    public double activate(double x) {
+        return Math.tanh(x);
+    }
+
+    @Override
+    public double derivative(double x) {
+        double tanh = activate(x);
+        return 1 - tanh * tanh;
+    }
+}
+package cnn.utils;
+
+public class TrainingConfig {
+    private double learningRate;
+
+    public TrainingConfig(double learningRate) {
+        this.learningRate = learningRate;
+    }
+
+    public double getLearningRate() {
+        return learningRate;
+    }
+
+    public void setLearningRate(double learningRate) {
+        this.learningRate = learningRate;
+    }
+}
+package cnn;
+
+import cnn.interfaces.Layer;
+import cnn.utils.TrainingConfig;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class CNN {
+    private List<Layer> layers;
+    private TrainingConfig config;
+
+    public CNN(TrainingConfig config) {
+        this.layers = new ArrayList<>();
+        this.config = config;
+    }
+
+    public void addLayer(Layer layer) {
+        layers.add(layer);
+    }
+
+    public double[][][] forward(double[][][] input) {
+        double[][][] output = input;
+        for (Layer layer : layers) {
+            output = layer.forward(output);
+        }
+        return output;
+    }
+
+    public double[][][] backward(double[][][] gradient) {
+        double[][][] grad = gradient;
+        for (int i = layers.size() - 1; i >= 0; i--) {
+            grad = layers.get(i).backward(grad);
+        }
+        return grad;
+    }
+
+    public TrainingConfig getConfig() {
+        return config;
+    }
+}
+package cnn;
+
+import java.util.List;
+import java.util.Collections;
+
+import cnn.utils.ImageData;
+import cnn.utils.MatrixUtils;
+
+public class CNNTrainer {
+    private CNN cnn;
+
+    public CNNTrainer(CNN cnn) {
+        this.cnn = cnn;
+    }
+
+    // Метод для обучения
+    public void train(List<ImageData> trainDataset, List<ImageData> testDataset, int epochs, int batchSize) {
+        for (int epoch = 0; epoch < epochs; epoch++) {
+            Collections.shuffle(trainDataset); // Перемешивание данных для каждой эпохи
+            double totalLoss = 0;
+            int batchCount = 0;
+
+            for (int batchStart = 0; batchStart < trainDataset.size(); batchStart += batchSize) {
+                int batchEnd = Math.min(batchStart + batchSize, trainDataset.size());
+                List<ImageData> miniBatch = trainDataset.subList(batchStart, batchEnd);
+
+                double[][][] accumulatedGradient = null;
+                for (ImageData data : miniBatch) {
+                    // Прямой проход
+                    double[][][] output = cnn.forward(data.imageData);
+
+                    // Вычисление потерь
+                    double loss = computeLoss(output[0][0], data.label);
+                    totalLoss += loss;
+
+                    // Вычисление градиента функции потерь
+                    double[][][] lossGradient = computeLossGradient(output[0][0], data.label);
+
+                    // Накопление градиентов
+                    if (accumulatedGradient == null) {
+                        accumulatedGradient = lossGradient;
+                    } else {
+                        accumulatedGradient = MatrixUtils.add(accumulatedGradient, lossGradient);
+                    }
+                }
+
+                // Обновление весов по накопленному градиенту среднего значения
+                cnn.backward(MatrixUtils.divide(accumulatedGradient, miniBatch.size()));
+                batchCount++;
+            }
+
+            double averageLoss = totalLoss / trainDataset.size();
+            double accuracy = evaluateAccuracy(cnn, testDataset);
+            System.out.println("Epoch " + (epoch + 1) + ", Loss: " + averageLoss + ", Accuracy: " + accuracy);
+        }
+    }
+
+    // Метод для вычисления функции потерь (например, среднеквадратичная ошибка)
+    private double computeLoss(double[] output, double[] target) {
+        double loss = 0;
+        for (int i = 0; i < output.length; i++) {
+            loss += Math.pow(output[i] - target[i], 2);
+        }
+        return loss / output.length;
+    }
+
+    // Метод для вычисления градиента функции потерь
+    private double[][][] computeLossGradient(double[] output, double[] target) {
+        double[][][] gradient = new double[1][1][output.length];
+        for (int i = 0; i < output.length; i++) {
+            gradient[0][0][i] = 2 * (output[i] - target[i]) / output.length;
+        }
+        return gradient;
+    }
+
+    // Метод для вычисления точности
+    private double evaluateAccuracy(CNN cnn, List<ImageData> dataset) {
+        int correct = 0;
+        for (ImageData data : dataset) {
+            double[][][] output = cnn.forward(data.imageData);
+            int predictedLabel = argMax(output[0][0]);
+            int actualLabel = argMax(data.label);
+            if (predictedLabel == actualLabel) {
+                correct++;
+            }
+        }
+        return (double) correct / dataset.size();
+    }
+
+    // Метод для нахождения индекса максимального элемента в массиве
+    private int argMax(double[] array) {
+        int maxIndex = 0;
+        for (int i = 1; i < array.length; i++) {
+            if (array[i] > array[maxIndex]) {
+                maxIndex = i;
+            }
+        }
+        return maxIndex;
+    }
+}
+package cnn;
+
+import cnn.layers.ConvolutionalLayer;
+import cnn.layers.FullyConnectedLayer;
+import cnn.layers.PoolingLayer;
+import cnn.utils.ImageData;
+import cnn.utils.ReLU;
+import cnn.utils.TrainingConfig;
+import cnn.utils.Softmax;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Arrays;
+
+public class Main {
+    public static void main(String[] args) throws IOException {
+        TrainingConfig config = new TrainingConfig(0.01); // Пример использования скорости обучения
+        CNN cnn = new CNN(config);
+        cnn.addLayer(new ConvolutionalLayer(3, 8, new ReLU(), config));
+        cnn.addLayer(new PoolingLayer(2));
+        cnn.addLayer(new FullyConnectedLayer(1352, 10, new ReLU(), config)); // Пример использования ReLU
+        cnn.addLayer(new FullyConnectedLayer(10, 10, new Softmax(), config)); // Пример использования Softmax
+
+        // Чтение данных MNIST
+        String trainImagesFile = "data/train-images.idx3-ubyte";
+        String trainLabelsFile = "data/train-labels.idx1-ubyte";
+        List<ImageData> trainDataset = MNISTReader.readMNISTData(trainImagesFile, trainLabelsFile);
+
+        String testImagesFile = "data/t10k-images.idx3-ubyte";
+        String testLabelsFile = "data/t10k-labels.idx1-ubyte";
+        List<ImageData> testDataset = MNISTReader.readMNISTData(testImagesFile, testLabelsFile);
+
+        // Создание и запуск тренера
+        CNNTrainer trainer = new CNNTrainer(cnn);
+        trainer.train(trainDataset, testDataset, 10,100); // 10 эпох
+
+        // Пример использования с тестовым изображением после обучения
+        double[][][] input = testDataset.get(0).imageData;
+        double[][][] output = cnn.forward(input);
+
+        // Вывод результата
+        System.out.println("Output: " + Arrays.deepToString(output));
+    }
+}
+package cnn;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import cnn.utils.ImageData;
+
+public class MNISTReader {
+
+    public static void main(String[] args) throws IOException {
+        String imagesFile = "data/train-images.idx3-ubyte";
+        String labelsFile = "data/train-labels.idx1-ubyte";
+        List<ImageData> dataset = readMNISTData(imagesFile, labelsFile);
+        Collections.shuffle(dataset);
+        System.out.println(Arrays.deepToString((Object[])dataset.get(0).getImageData()));
+        System.out.println(Arrays.toString(dataset.get(0).getLabel()));
+        // Use the dataset as needed
+    }
+
+    @SuppressWarnings("unused")
+    public static List<ImageData> readMNISTData(String imagesFile, String labelsFile) throws IOException {
+        try (DataInputStream images = new DataInputStream(new BufferedInputStream(new FileInputStream(imagesFile)));
+             DataInputStream labels = new DataInputStream(new BufferedInputStream(new FileInputStream(labelsFile)))) {
+
+            int magicNumberImages = images.readInt();
+            int numberOfImages = images.readInt();
+            int rows = images.readInt();
+            int cols = images.readInt();
+
+            int magicNumberLabels = labels.readInt();
+            int numberOfLabels = labels.readInt();
+
+            List<ImageData> dataset = new ArrayList<>();
+            for (int i = 0; i < numberOfImages; i++) {
+                // Read and normalize image data
+                double[][] imageData = new double[rows][cols];
+                for (int r = 0; r < rows; r++) {
+                    for (int c = 0; c < cols; c++) {
+                        imageData[r][c] = (images.readUnsignedByte() & 0xff) / 255.0;
+                    }
+                }
+
+                // Read label
+                int label = labels.readUnsignedByte();
+                double[] arrayLabel = new double[10];
+                arrayLabel[label] = 1.0;
+
+                // Store the image data and label in the dataset
+                dataset.add(new ImageData(new double[][][]{imageData}, arrayLabel));
+            }
+
+            return dataset;
+        }
+    }
+}

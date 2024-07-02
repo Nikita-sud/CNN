@@ -32,7 +32,7 @@ public class Main {
 
         // Создание и запуск тренера
         CNNTrainer trainer = new CNNTrainer(cnn);
-        trainer.train(trainDataset, testDataset, 10); // 10 эпох
+        trainer.train(trainDataset, testDataset, 10,100); // 10 эпох
 
         // Пример использования с тестовым изображением после обучения
         double[][][] input = testDataset.get(0).imageData;

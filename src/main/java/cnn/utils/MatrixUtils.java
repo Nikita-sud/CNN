@@ -2,7 +2,6 @@ package cnn.utils;
 
 public class MatrixUtils {
 
-    // Свёртка с учетом stride
     public static double applyFilter(double[][] input, double[][] filter, int startX, int startY) {
         int filterSize = filter.length;
         double sum = 0;
@@ -15,7 +14,6 @@ public class MatrixUtils {
         return sum;
     }
 
-    // Подвыборка (Pooling)
     public static double[][] maxPooling(double[][] input, int poolSize) {
         int inputSize = input.length;
         int outputSize = inputSize / poolSize;
@@ -77,6 +75,38 @@ public class MatrixUtils {
             output[j] = sum;
         }
         return output;
+    }
+
+    // Addition of two matrices
+    public static double[][][] add(double[][][] a, double[][][] b) {
+        int depth = a.length;
+        int height = a[0].length;
+        int width = a[0][0].length;
+        double[][][] result = new double[depth][height][width];
+        for (int d = 0; d < depth; d++) {
+            for (int h = 0; h < height; h++) {
+                for (int w = 0; w < width; w++) {
+                    result[d][h][w] = a[d][h][w] + b[d][h][w];
+                }
+            }
+        }
+        return result;
+    }
+
+    // Division of a matrix by a scalar
+    public static double[][][] divide(double[][][] a, double scalar) {
+        int depth = a.length;
+        int height = a[0].length;
+        int width = a[0][0].length;
+        double[][][] result = new double[depth][height][width];
+        for (int d = 0; d < depth; d++) {
+            for (int h = 0; h < height; h++) {
+                for (int w = 0; w < width; w++) {
+                    result[d][h][w] = a[d][h][w] / scalar;
+                }
+            }
+        }
+        return result;
     }
 
     // Обратная свёртка
