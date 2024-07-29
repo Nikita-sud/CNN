@@ -3,10 +3,12 @@ package cnn;
 import cnn.layers.ConvolutionalLayer;
 import cnn.layers.FullyConnectedLayer;
 import cnn.layers.PoolingLayer;
+import cnn.layers.SoftmaxLayer;
+import cnn.layers.PoolingLayer.PoolingType;
 import cnn.utils.ImageData;
 import cnn.utils.ReLU;
+import cnn.utils.Sigmoid;
 import cnn.utils.TrainingConfig;
-import cnn.utils.Softmax;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,12 +16,12 @@ import java.util.Arrays;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        TrainingConfig config = new TrainingConfig(0.01); // Пример использования скорости обучения
+        TrainingConfig config = new TrainingConfig(0.1); // Пример использования скорости обучения
         CNN cnn = new CNN(config);
-        cnn.addLayer(new ConvolutionalLayer(3, 8, new ReLU(), config));
-        cnn.addLayer(new PoolingLayer(2));
-        cnn.addLayer(new FullyConnectedLayer(1352, 10, new ReLU(), config)); // Пример использования ReLU
-        cnn.addLayer(new FullyConnectedLayer(10, 10, new Softmax(), config)); // Пример использования Softmax
+        cnn.addLayer(new ConvolutionalLayer(5, 3, new ReLU(), config));
+        cnn.addLayer(new PoolingLayer(2, PoolingType.AVERAGE));
+        cnn.addLayer(new FullyConnectedLayer(432, 10, new Sigmoid(), config)); // Пример использования Tanh или другой активации
+        cnn.addLayer(new SoftmaxLayer()); // Добавляем слой Softmax отдельно
 
         // Чтение данных MNIST
         String trainImagesFile = "data/train-images.idx3-ubyte";
@@ -32,7 +34,7 @@ public class Main {
 
         // Создание и запуск тренера
         CNNTrainer trainer = new CNNTrainer(cnn);
-        trainer.train(trainDataset, testDataset, 10,100); // 10 эпох
+        trainer.train(trainDataset, testDataset, 10, 100); // 10 эпох
 
         // Пример использования с тестовым изображением после обучения
         double[][][] input = testDataset.get(0).imageData;

@@ -42,7 +42,7 @@ public class ConvolutionalLayer implements Layer {
             for (int d = 0; d < inputDepth; d++) {
                 for (int i = 0; i < filterSize; i++) {
                     for (int j = 0; j < filterSize; j++) {
-                        filters[f][d][i][j] = Math.random();
+                        filters[f][d][i][j] = Math.random() * Math.sqrt(2.0 / (inputDepth * filterSize * filterSize));
                     }
                 }
             }
@@ -94,7 +94,7 @@ public class ConvolutionalLayer implements Layer {
         double[][][] inputGradient = new double[inputDepth][inputSize][inputSize];
         double[][][][] filterGradient = new double[numFilters][inputDepth][filterSize][filterSize];
         double[] biasGradient = new double[numFilters];
-
+    
         // Обратное распространение через активационные функции
         for (int f = 0; f < numFilters; f++) {
             for (int i = 0; i < outputSize; i++) {
@@ -103,7 +103,7 @@ public class ConvolutionalLayer implements Layer {
                 }
             }
         }
-
+    
         // Вычисление градиента для фильтров и входов
         for (int f = 0; f < numFilters; f++) {
             for (int i = 0; i < outputSize; i++) {
@@ -111,10 +111,15 @@ public class ConvolutionalLayer implements Layer {
                     int x = i * stride;
                     int y = j * stride;
                     for (int d = 0; d < inputDepth; d++) {
+                        // Поворот фильтра на 180 градусов
+                        double[][] rotatedFilter = MatrixUtils.rotate180(filters[f][d]);
                         for (int k = 0; k < filterSize; k++) {
                             for (int l = 0; l < filterSize; l++) {
                                 filterGradient[f][d][k][l] += input[d][x + k][y + l] * gradient[f][i][j];
-                                inputGradient[d][x + k][y + l] += filters[f][d][k][l] * gradient[f][i][j];
+                                // Использование повернутого фильтра для градиента входных данных
+                                if (x + k < inputSize && y + l < inputSize) {
+                                    inputGradient[d][x + k][y + l] += rotatedFilter[k][l] * gradient[f][i][j];
+                                }
                             }
                         }
                     }
@@ -122,7 +127,7 @@ public class ConvolutionalLayer implements Layer {
                 }
             }
         }
-
+    
         // Обновление параметров
         for (int f = 0; f < numFilters; f++) {
             for (int d = 0; d < inputDepth; d++) {
@@ -134,7 +139,7 @@ public class ConvolutionalLayer implements Layer {
             }
             biases[f] -= config.getLearningRate() * biasGradient[f];
         }
-
+    
         return inputGradient;
     }
 }

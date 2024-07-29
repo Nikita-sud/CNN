@@ -56,11 +56,12 @@ public class CNNTrainer {
         }
     }
 
-    // Метод для вычисления функции потерь (например, среднеквадратичная ошибка)
+    // Метод для вычисления функции потерь (кросс-энтропия)
     private double computeLoss(double[] output, double[] target) {
         double loss = 0;
         for (int i = 0; i < output.length; i++) {
-            loss += Math.pow(output[i] - target[i], 2);
+            double adjustedOutput = Math.max(Math.min(output[i], 1 - 1e-15), 1e-15);
+            loss -= target[i] * Math.log(adjustedOutput) + (1 - target[i]) * Math.log(1 - adjustedOutput);
         }
         return loss / output.length;
     }
@@ -69,7 +70,8 @@ public class CNNTrainer {
     private double[][][] computeLossGradient(double[] output, double[] target) {
         double[][][] gradient = new double[1][1][output.length];
         for (int i = 0; i < output.length; i++) {
-            gradient[0][0][i] = 2 * (output[i] - target[i]) / output.length;
+            double adjustedOutput = Math.max(Math.min(output[i], 1 - 1e-15), 1e-15);
+            gradient[0][0][i] = (adjustedOutput - target[i]) / (adjustedOutput * (1 - adjustedOutput));
         }
         return gradient;
     }

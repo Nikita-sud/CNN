@@ -5,13 +5,20 @@ import cnn.utils.MatrixUtils;
 import cnn.utils.TrainingConfig;
 
 public class PoolingLayer implements Layer {
+    public enum PoolingType {
+        MAX,
+        AVERAGE
+    }
+
     private int poolSize;
     private double[][][] input;
+    private PoolingType poolingType;
     @SuppressWarnings("unused")
     private TrainingConfig config;
 
-    public PoolingLayer(int poolSize) {
+    public PoolingLayer(int poolSize, PoolingType poolingType) {
         this.poolSize = poolSize;
+        this.poolingType = poolingType;
     }
 
     @Override
@@ -24,7 +31,11 @@ public class PoolingLayer implements Layer {
         double[][][] output = new double[inputDepth][outputSize][outputSize];
 
         for (int d = 0; d < inputDepth; d++) {
-            output[d] = MatrixUtils.maxPooling(input[d], poolSize);
+            if (poolingType == PoolingType.MAX) {
+                output[d] = MatrixUtils.maxPooling(input[d], poolSize);
+            } else if (poolingType == PoolingType.AVERAGE) {
+                output[d] = MatrixUtils.averagePooling(input[d], poolSize);
+            }
         }
 
         return output;
@@ -42,18 +53,28 @@ public class PoolingLayer implements Layer {
                 for (int j = 0; j < outputSize; j++) {
                     int x = i * poolSize;
                     int y = j * poolSize;
-                    double maxVal = input[d][x][y];
-                    int maxI = x, maxJ = y;
-                    for (int k = 0; k < poolSize; k++) {
-                        for (int l = 0; l < poolSize; l++) {
-                            if (input[d][x + k][y + l] > maxVal) {
-                                maxVal = input[d][x + k][y + l];
-                                maxI = x + k;
-                                maxJ = y + l;
+
+                    if (poolingType == PoolingType.MAX) {
+                        double maxVal = input[d][x][y];
+                        int maxI = x, maxJ = y;
+                        for (int k = 0; k < poolSize; k++) {
+                            for (int l = 0; l < poolSize; l++) {
+                                if (input[d][x + k][y + l] > maxVal) {
+                                    maxVal = input[d][x + k][y + l];
+                                    maxI = x + k;
+                                    maxJ = y + l;
+                                }
+                            }
+                        }
+                        inputGradient[d][maxI][maxJ] = gradient[d][i][j];
+                    } else if (poolingType == PoolingType.AVERAGE) {
+                        double gradientValue = gradient[d][i][j] / (poolSize * poolSize);
+                        for (int k = 0; k < poolSize; k++) {
+                            for (int l = 0; l < poolSize; l++) {
+                                inputGradient[d][x + k][y + l] = gradientValue;
                             }
                         }
                     }
-                    inputGradient[d][maxI][maxJ] = gradient[d][i][j];
                 }
             }
         }

@@ -14,6 +14,17 @@ public class MatrixUtils {
         return sum;
     }
 
+    public static double[][] rotate180(double[][] matrix) {
+        int n = matrix.length;
+        double[][] rotated = new double[n][n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+                rotated[i][j] = matrix[n - 1 - i][n - 1 - j];
+            }
+        }
+        return rotated;
+    }
+
     public static double[][] maxPooling(double[][] input, int poolSize) {
         int inputSize = input.length;
         int outputSize = inputSize / poolSize;
@@ -21,44 +32,37 @@ public class MatrixUtils {
 
         for (int i = 0; i < outputSize; i++) {
             for (int j = 0; j < outputSize; j++) {
-                double max = input[i * poolSize][j * poolSize];
+                double maxVal = input[i * poolSize][j * poolSize];
                 for (int k = 0; k < poolSize; k++) {
                     for (int l = 0; l < poolSize; l++) {
-                        if (input[i * poolSize + k][j * poolSize + l] > max) {
-                            max = input[i * poolSize + k][j * poolSize + l];
+                        if (input[i * poolSize + k][j * poolSize + l] > maxVal) {
+                            maxVal = input[i * poolSize + k][j * poolSize + l];
                         }
                     }
                 }
-                output[i][j] = max;
+                output[i][j] = maxVal;
             }
         }
         return output;
     }
 
-    public static double[][] maxPoolingBackward(double[][] input, double[][] gradient, int poolSize) {
+    public static double[][] averagePooling(double[][] input, int poolSize) {
         int inputSize = input.length;
         int outputSize = inputSize / poolSize;
-        double[][] inputGradient = new double[inputSize][inputSize];
+        double[][] output = new double[outputSize][outputSize];
 
         for (int i = 0; i < outputSize; i++) {
             for (int j = 0; j < outputSize; j++) {
-                double max = input[i * poolSize][j * poolSize];
-                int maxX = i * poolSize;
-                int maxY = j * poolSize;
+                double sum = 0.0;
                 for (int k = 0; k < poolSize; k++) {
                     for (int l = 0; l < poolSize; l++) {
-                        if (input[i * poolSize + k][j * poolSize + l] > max) {
-                            max = input[i * poolSize + k][j * poolSize + l];
-                            maxX = i * poolSize + k;
-                            maxY = j * poolSize + l;
-                        }
+                        sum += input[i * poolSize + k][j * poolSize + l];
                     }
                 }
-                inputGradient[maxX][maxY] = gradient[i][j];
+                output[i][j] = sum / (poolSize * poolSize);
             }
         }
-
-        return inputGradient;
+        return output;
     }
 
     // Перемножение матриц
@@ -107,25 +111,6 @@ public class MatrixUtils {
             }
         }
         return result;
-    }
-
-    // Обратная свёртка
-    public static double[][] convolveBackward(double[][] input, double[][] filter) {
-        int inputSize = input.length;
-        int filterSize = filter.length;
-        int outputSize = inputSize + filterSize - 1;
-        double[][] output = new double[outputSize][outputSize];
-
-        for (int i = 0; i < inputSize; i++) {
-            for (int j = 0; j < inputSize; j++) {
-                for (int k = 0; k < filterSize; k++) {
-                    for (int l = 0; l < filterSize; l++) {
-                        output[i + k][j + l] += input[i][j] * filter[k][l];
-                    }
-                }
-            }
-        }
-        return output;
     }
 
     // Flattening
