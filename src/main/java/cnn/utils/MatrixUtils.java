@@ -8,7 +8,11 @@ public class MatrixUtils {
 
         for (int i = 0; i < filterSize; i++) {
             for (int j = 0; j < filterSize; j++) {
-                sum += input[startX + i][startY + j] * filter[i][j];
+                int x = startX + i;
+                int y = startY + j;
+                if (x >= 0 && x < input.length && y >= 0 && y < input[0].length) {
+                    sum += input[x][y] * filter[i][j];
+                }
             }
         }
         return sum;
@@ -23,6 +27,34 @@ public class MatrixUtils {
             }
         }
         return rotated;
+    }
+
+    public static double[][] convolve(double[][] input, double[][] filter, int stride) {
+        int inputSize = input.length;
+        int filterSize = filter.length;
+        int outputSize = (inputSize - filterSize) / stride + 1;
+        double[][] output = new double[outputSize][outputSize];
+
+        for (int i = 0; i < outputSize; i++) {
+            for (int j = 0; j < outputSize; j++) {
+                output[i][j] = applyFilter(input, filter, i * stride, j * stride);
+            }
+        }
+        return output;
+    }
+
+    public static double[][] fullConvolve(double[][] input, double[][] filter) {
+        int inputSize = input.length;
+        int filterSize = filter.length;
+        int outputSize = inputSize + filterSize - 1;
+        double[][] output = new double[outputSize][outputSize];
+
+        for (int i = -filterSize + 1; i < inputSize; i++) {
+            for (int j = -filterSize + 1; j < inputSize; j++) {
+                output[i + filterSize - 1][j + filterSize - 1] = applyFilter(input, filter, i, j);
+            }
+        }
+        return output;
     }
 
     public static double[][] maxPooling(double[][] input, int poolSize) {

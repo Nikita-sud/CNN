@@ -18,9 +18,8 @@ public class Main {
     public static void main(String[] args) throws IOException {
         TrainingConfig config = new TrainingConfig(0.1); // Пример использования скорости обучения
         CNN cnn = new CNN(config);
-        cnn.addLayer(new ConvolutionalLayer(5, 3, new ReLU(), config));
-        cnn.addLayer(new PoolingLayer(2, PoolingType.AVERAGE));
-        cnn.addLayer(new FullyConnectedLayer(432, 10, new Sigmoid(), config)); // Пример использования Tanh или другой активации
+        cnn.addLayer(new FullyConnectedLayer(784, 30, new Sigmoid(), config)); // Пример использования Tanh или другой активации
+        cnn.addLayer(new FullyConnectedLayer(30, 10, new Sigmoid(), config));
         cnn.addLayer(new SoftmaxLayer()); // Добавляем слой Softmax отдельно
 
         // Чтение данных MNIST
