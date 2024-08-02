@@ -13,9 +13,10 @@ public class Main {
     public static void main(String[] args) throws IOException {
         double learningRate = 0.1;
         CNN cnn = new CNN(learningRate);
-        cnn.addLayer(new FullyConnectedLayer(784, 30, new ReLU()));
-        cnn.addLayer(new FullyConnectedLayer(30, 10, new ReLU()));
-        cnn.addLayer(new SoftmaxLayer());
+
+        cnn.addLayer(new FullyConnectedLayer(784, 60, new ReLU()));
+        cnn.addLayer(new FullyConnectedLayer(60, 10, new ReLU()));
+        cnn.addLayer(new SoftmaxLayer());      
 
         String trainImagesFile = "data/train-images.idx3-ubyte";
         String trainLabelsFile = "data/train-labels.idx1-ubyte";
