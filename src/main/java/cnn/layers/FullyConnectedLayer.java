@@ -3,7 +3,6 @@ package cnn.layers;
 import cnn.interfaces.Layer;
 import cnn.utils.MatrixUtils;
 import cnn.interfaces.ActivationFunction;
-import cnn.utils.TrainingConfig;
 import java.util.Random;
 
 public class FullyConnectedLayer implements Layer {
@@ -11,50 +10,55 @@ public class FullyConnectedLayer implements Layer {
     private int outputSize;
     private double[][] weights;
     private double[] biases;
-    private double[][][] input;  // Изменено для хранения оригинальных входных данных
+    private double[][][] input;
     private ActivationFunction activationFunction;
-    private TrainingConfig config;
+    private double[][] accumulatedWeightGradients;
+    private double[] accumulatedBiasGradients;
 
-    public FullyConnectedLayer(int inputSize, int outputSize, ActivationFunction activationFunction, TrainingConfig config) {
+    public FullyConnectedLayer(int inputSize, int outputSize, ActivationFunction activationFunction) {
         this.inputSize = inputSize;
         this.outputSize = outputSize;
         this.weights = new double[inputSize][outputSize];
         this.biases = new double[outputSize];
         this.activationFunction = activationFunction;
-        this.config = config;
         initializeWeights();
+        initializeAccumulatedGradients();
     }
 
     private void initializeWeights() {
         Random rand = new Random();
         for (int i = 0; i < inputSize; i++) {
             for (int j = 0; j < outputSize; j++) {
-                weights[i][j] = rand.nextGaussian() * Math.sqrt(2.0 / inputSize); // улучшенная инициализация весов
+                weights[i][j] = rand.nextGaussian() * Math.sqrt(2.0 / inputSize);
             }
         }
         for (int j = 0; j < outputSize; j++) {
-            biases[j] = 0.0; // начнем с нулевых смещений
+            biases[j] = 0.0;
         }
+    }
+
+    private void initializeAccumulatedGradients() {
+        accumulatedWeightGradients = new double[inputSize][outputSize];
+        accumulatedBiasGradients = new double[outputSize];
     }
 
     @Override
     public double[][][] forward(double[][][] input) {
-        this.input = input; // Сохраняем оригинальные входные данные
+        this.input = input;
         double[] flattenedInput = MatrixUtils.flatten(input);
         double[] preActivation = MatrixUtils.multiply(flattenedInput, weights, biases);
         double[] postActivation = new double[outputSize];
         for (int i = 0; i < outputSize; i++) {
             postActivation[i] = activationFunction.activate(preActivation[i]);
         }
-        return new double[][][] { { postActivation } };
+        return new double[][][]{{postActivation}};
     }
 
     @Override
     public double[][][] backward(double[][][] gradient) {
-        double[] postActivationGradient = MatrixUtils.flatten(gradient); // Используем flatten для преобразования градиентов в одномерный массив
+        double[] postActivationGradient = MatrixUtils.flatten(gradient);
         double[] preActivationGradient = new double[outputSize];
 
-        // Получение предактивационных значений
         double[] flattenedInput = MatrixUtils.flatten(input);
         double[] preActivation = MatrixUtils.multiply(flattenedInput, weights, biases);
 
@@ -76,13 +80,39 @@ public class FullyConnectedLayer implements Layer {
 
         for (int i = 0; i < inputSize; i++) {
             for (int j = 0; j < outputSize; j++) {
-                weights[i][j] -= config.getLearningRate() * weightGradient[i][j];
+                accumulatedWeightGradients[i][j] += weightGradient[i][j];
             }
         }
         for (int j = 0; j < outputSize; j++) {
-            biases[j] -= config.getLearningRate() * biasGradient[j];
+            accumulatedBiasGradients[j] += biasGradient[j];
         }
 
         return MatrixUtils.unflatten(inputGradient, input.length, input[0].length, input[0][0].length);
+    }
+
+    @Override
+    public void updateParameters(double learningRate, int miniBatchSize) {
+        for (int i = 0; i < inputSize; i++) {
+            for (int j = 0; j < outputSize; j++) {
+                weights[i][j] -= learningRate * accumulatedWeightGradients[i][j] / miniBatchSize;
+                accumulatedWeightGradients[i][j] = 0; // Reset accumulated gradient
+            }
+        }
+        for (int j = 0; j < outputSize; j++) {
+            biases[j] -= learningRate * accumulatedBiasGradients[j] / miniBatchSize;
+            accumulatedBiasGradients[j] = 0; // Reset accumulated gradient
+        }
+    }
+
+    @Override
+    public void resetGradients() {
+        for (int i = 0; i < inputSize; i++) {
+            for (int j = 0; j < outputSize; j++) {
+                accumulatedWeightGradients[i][j] = 0;
+            }
+        }
+        for (int j = 0; j < outputSize; j++) {
+            accumulatedBiasGradients[j] = 0;
+        }
     }
 }

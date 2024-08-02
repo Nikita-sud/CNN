@@ -2,7 +2,6 @@ package cnn.layers;
 
 import cnn.interfaces.Layer;
 import cnn.utils.MatrixUtils;
-import cnn.utils.TrainingConfig;
 
 public class PoolingLayer implements Layer {
     public enum PoolingType {
@@ -13,8 +12,6 @@ public class PoolingLayer implements Layer {
     private int poolSize;
     private double[][][] input;
     private PoolingType poolingType;
-    @SuppressWarnings("unused")
-    private TrainingConfig config;
 
     public PoolingLayer(int poolSize, PoolingType poolingType) {
         this.poolSize = poolSize;
@@ -79,5 +76,15 @@ public class PoolingLayer implements Layer {
             }
         }
         return inputGradient;
+    }
+
+    @Override
+    public void updateParameters(double learningRate, int miniBatchSize) {
+        // Pooling layers do not have parameters to update.
+    }
+
+    @Override
+    public void resetGradients() {
+        // Pooling layers do not have gradients to reset.
     }
 }

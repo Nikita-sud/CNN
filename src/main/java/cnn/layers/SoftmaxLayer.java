@@ -1,5 +1,4 @@
 package cnn.layers;
-
 import cnn.interfaces.Layer;
 import cnn.utils.MatrixUtils;
 
@@ -8,16 +7,16 @@ public class SoftmaxLayer implements Layer {
 
     @Override
     public double[][][] forward(double[][][] input) {
-        this.input = input; // Сохраняем оригинальные входные данные
+        this.input = input;
         double[] flattenedInput = MatrixUtils.flatten(input);
         double[] softmaxOutput = softmax(flattenedInput);
-        return new double[][][] { { softmaxOutput } };
+        return new double[][][]{{softmaxOutput}};
     }
 
     private double[] softmax(double[] input) {
         double[] output = new double[input.length];
         double max = Double.NEGATIVE_INFINITY;
-        
+
         for (double v : input) {
             if (v > max) {
                 max = v;
@@ -43,7 +42,7 @@ public class SoftmaxLayer implements Layer {
         double[] softmaxOutput = MatrixUtils.flatten(input);
         double[] preActivationGradient = softmaxDerivative(softmaxOutput, postActivationGradient);
 
-        return new double[][][] { { preActivationGradient } };
+        return new double[][][]{{preActivationGradient}};
     }
 
     private double[] softmaxDerivative(double[] output, double[] target) {
@@ -52,5 +51,15 @@ public class SoftmaxLayer implements Layer {
             gradient[i] = output[i] - target[i];
         }
         return gradient;
+    }
+
+    @Override
+    public void updateParameters(double learningRate, int miniBatchSize) {
+        // Softmax layers do not have parameters to update.
+    }
+
+    @Override
+    public void resetGradients() {
+        // Softmax layers do not have parameters to reset.
     }
 }

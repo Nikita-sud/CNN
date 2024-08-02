@@ -3,7 +3,6 @@ package cnn.layers;
 import cnn.interfaces.Layer;
 import cnn.utils.MatrixUtils;
 import cnn.utils.ReLU;
-import cnn.utils.TrainingConfig;
 import cnn.interfaces.ActivationFunction;
 
 public class ConvolutionalLayer implements Layer {
@@ -15,25 +14,26 @@ public class ConvolutionalLayer implements Layer {
     private double[][][] input;
     private double[][][] activatedOutput;
     private ActivationFunction activationFunction;
-    private TrainingConfig config;
+    private double[][][][] accumulatedFilterGradients;
+    private double[] accumulatedBiasGradients;
 
-    public ConvolutionalLayer(int filterSize, int numFilters, int stride, ActivationFunction activationFunction, TrainingConfig config) {
+    public ConvolutionalLayer(int filterSize, int numFilters, int stride, ActivationFunction activationFunction) {
         this.filterSize = filterSize;
         this.numFilters = numFilters;
         this.stride = stride;
         this.filters = new double[numFilters][][][];
         this.biases = new double[numFilters];
         this.activationFunction = activationFunction;
-        this.config = config;
         initializeBiases();
+        initializeAccumulatedGradients();
     }
 
-    public ConvolutionalLayer(int filterSize, int numFilters, ActivationFunction activationFunction, TrainingConfig config) {
-        this(filterSize, numFilters, 1, activationFunction, config);
+    public ConvolutionalLayer(int filterSize, int numFilters, ActivationFunction activationFunction) {
+        this(filterSize, numFilters, 1, activationFunction);
     }
 
-    public ConvolutionalLayer(int filterSize, int numFilters, TrainingConfig config) {
-        this(filterSize, numFilters, 1, new ReLU(), config);
+    public ConvolutionalLayer(int filterSize, int numFilters) {
+        this(filterSize, numFilters, 1, new ReLU());
     }
 
     private void initializeFilters(int inputDepth) {
@@ -53,6 +53,14 @@ public class ConvolutionalLayer implements Layer {
         for (int i = 0; i < numFilters; i++) {
             biases[i] = Math.random();
         }
+    }
+
+    private void initializeAccumulatedGradients() {
+        accumulatedFilterGradients = new double[numFilters][][][];
+        for (int f = 0; f < numFilters; f++) {
+            accumulatedFilterGradients[f] = new double[filters[0].length][filterSize][filterSize];
+        }
+        accumulatedBiasGradients = new double[numFilters];
     }
 
     @Override
@@ -92,10 +100,8 @@ public class ConvolutionalLayer implements Layer {
         int inputSize = input[0].length;
         int outputSize = activatedOutput[0].length;
         double[][][] inputGradient = new double[inputDepth][inputSize][inputSize];
-        double[][][][] filterGradient = new double[numFilters][inputDepth][filterSize][filterSize];
-        double[] biasGradient = new double[numFilters];
 
-        // Обратное распространение через активационные функции
+        // Backpropagation through activation function
         for (int f = 0; f < numFilters; f++) {
             for (int i = 0; i < outputSize; i++) {
                 for (int j = 0; j < outputSize; j++) {
@@ -104,13 +110,13 @@ public class ConvolutionalLayer implements Layer {
             }
         }
 
-        // Вычисление градиента для фильтров и входов
+        // Calculate gradients for filters and inputs
         for (int f = 0; f < numFilters; f++) {
             for (int d = 0; d < inputDepth; d++) {
                 double[][] filterGrad = MatrixUtils.convolve(input[d], gradient[f], stride);
                 for (int i = 0; i < filterSize; i++) {
                     for (int j = 0; j < filterSize; j++) {
-                        filterGradient[f][d][i][j] += filterGrad[i][j];
+                        accumulatedFilterGradients[f][d][i][j] += filterGrad[i][j];
                     }
                 }
                 double[][] rotatedFilter = MatrixUtils.rotate180(filters[f][d]);
@@ -123,23 +129,41 @@ public class ConvolutionalLayer implements Layer {
             }
             for (int i = 0; i < outputSize; i++) {
                 for (int j = 0; j < outputSize; j++) {
-                    biasGradient[f] += gradient[f][i][j];
+                    accumulatedBiasGradients[f] += gradient[f][i][j];
                 }
             }
-        }
-
-        // Обновление параметров
-        for (int f = 0; f < numFilters; f++) {
-            for (int d = 0; d < inputDepth; d++) {
-                for (int k = 0; k < filterSize; k++) {
-                    for (int l = 0; l < filterSize; l++) {
-                        filters[f][d][k][l] -= config.getLearningRate() * filterGradient[f][d][k][l];
-                    }
-                }
-            }
-            biases[f] -= config.getLearningRate() * biasGradient[f];
         }
 
         return inputGradient;
+    }
+
+    @Override
+    public void updateParameters(double learningRate, int miniBatchSize) {
+        for (int f = 0; f < numFilters; f++) {
+            for (int d = 0; d < filters[f].length; d++) {
+                for (int i = 0; i < filterSize; i++) {
+                    for (int j = 0; j < filterSize; j++) {
+                        filters[f][d][i][j] -= learningRate * accumulatedFilterGradients[f][d][i][j] / miniBatchSize;
+                        accumulatedFilterGradients[f][d][i][j] = 0; // Reset accumulated gradient
+                    }
+                }
+            }
+            biases[f] -= learningRate * accumulatedBiasGradients[f] / miniBatchSize;
+            accumulatedBiasGradients[f] = 0; // Reset accumulated gradient
+        }
+    }
+
+    @Override
+    public void resetGradients() {
+        for (int f = 0; f < numFilters; f++) {
+            for (int d = 0; d < filters[f].length; d++) {
+                for (int i = 0; i < filterSize; i++) {
+                    for (int j = 0; j < filterSize; j++) {
+                        accumulatedFilterGradients[f][d][i][j] = 0;
+                    }
+                }
+            }
+            accumulatedBiasGradients[f] = 0;
+        }
     }
 }

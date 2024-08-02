@@ -1,18 +1,19 @@
 package cnn;
 
 import cnn.interfaces.Layer;
-import cnn.utils.TrainingConfig;
+import cnn.utils.ImageData;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class CNN {
     private List<Layer> layers;
-    private TrainingConfig config;
+    private double learningRate;
 
-    public CNN(TrainingConfig config) {
+    public CNN(double learningRate) {
         this.layers = new ArrayList<>();
-        this.config = config;
+        this.learningRate = learningRate;
     }
 
     public void addLayer(Layer layer) {
@@ -35,7 +36,89 @@ public class CNN {
         return grad;
     }
 
-    public TrainingConfig getConfig() {
-        return config;
+    public void updateParameters(int miniBatchSize) {
+        for (Layer layer : layers) {
+            layer.updateParameters(learningRate, miniBatchSize);
+        }
+    }
+
+    public void resetGradients() {
+        for (Layer layer : layers) {
+            layer.resetGradients();
+        }
+    }
+
+    public void SGD(List<ImageData> trainingData, int epochs, int miniBatchSize, List<ImageData> testData) {
+        int nTest = testData.size();
+
+        for (int epoch = 0; epoch < epochs; epoch++) {
+            Collections.shuffle(trainingData);
+            List<List<ImageData>> miniBatches = createMiniBatches(trainingData, miniBatchSize);
+
+            miniBatches.parallelStream().forEach(miniBatch -> updateMiniBatch(miniBatch, miniBatchSize));
+
+            if (nTest > 0) {
+                System.out.println("Epoch " + (epoch + 1) + ": " + evaluate(testData) + " / " + nTest);
+            }
+        }
+    }
+
+    private List<List<ImageData>> createMiniBatches(List<ImageData> trainingData, int miniBatchSize) {
+        List<List<ImageData>> miniBatches = new ArrayList<>();
+        for (int i = 0; i < trainingData.size(); i += miniBatchSize) {
+            miniBatches.add(trainingData.subList(i, Math.min(i + miniBatchSize, trainingData.size())));
+        }
+        return miniBatches;
+    }
+
+    private void updateMiniBatch(List<ImageData> miniBatch, int miniBatchSize) {
+        resetGradients();
+        for (ImageData data : miniBatch) {
+            double[][][] output = forward(data.imageData);
+            double[][][] lossGradient = computeLossGradient(output[0][0], data.label);
+            backward(lossGradient);
+        }
+        updateParameters(miniBatchSize);
+    }
+
+    @SuppressWarnings("unused")
+    private double computeLoss(double[] output, double[] target) {
+        double loss = 0;
+        for (int i = 0; i < output.length; i++) {
+            double adjustedOutput = Math.max(Math.min(output[i], 1 - 1e-15), 1e-15);
+            loss -= target[i] * Math.log(adjustedOutput) + (1 - target[i]) * Math.log(1 - adjustedOutput);
+        }
+        return loss / output.length;
+    }
+
+    private double[][][] computeLossGradient(double[] output, double[] target) {
+        double[][][] gradient = new double[1][1][output.length];
+        for (int i = 0; i < output.length; i++) {
+            gradient[0][0][i] = output[i] - target[i];
+        }
+        return gradient;
+    }
+
+    public int evaluate(List<ImageData> testData) {
+        int correct = 0;
+        for (ImageData data : testData) {
+            double[][][] output = forward(data.imageData);
+            int predictedLabel = argMax(output[0][0]);
+            int actualLabel = argMax(data.label);
+            if (predictedLabel == actualLabel) {
+                correct++;
+            }
+        }
+        return correct;
+    }
+
+    private int argMax(double[] array) {
+        int maxIndex = 0;
+        for (int i = 1; i < array.length; i++) {
+            if (array[i] > array[maxIndex]) {
+                maxIndex = i;
+            }
+        }
+        return maxIndex;
     }
 }
