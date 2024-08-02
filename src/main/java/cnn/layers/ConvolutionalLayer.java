@@ -4,6 +4,7 @@ import cnn.interfaces.Layer;
 import cnn.utils.MatrixUtils;
 import cnn.utils.ReLU;
 import cnn.interfaces.ActivationFunction;
+import java.util.Random;
 
 public class ConvolutionalLayer implements Layer {
     private int filterSize;
@@ -16,23 +17,36 @@ public class ConvolutionalLayer implements Layer {
     private ActivationFunction activationFunction;
     private double[][][][] accumulatedFilterGradients;
     private double[] accumulatedBiasGradients;
+    private double dropoutRate;
+    private double[][][] dropoutMask;
+    private boolean isTraining;
 
-    public ConvolutionalLayer(int filterSize, int numFilters, int stride, ActivationFunction activationFunction) {
+    public ConvolutionalLayer(int filterSize, int numFilters, int stride, ActivationFunction activationFunction, double dropoutRate) {
         this.filterSize = filterSize;
         this.numFilters = numFilters;
         this.stride = stride;
         this.filters = new double[numFilters][][][];
         this.biases = new double[numFilters];
         this.activationFunction = activationFunction;
+        this.dropoutRate = dropoutRate;
+        this.isTraining = true;
         initializeBiases();
     }
 
+    public ConvolutionalLayer(int filterSize, int numFilters, ActivationFunction activationFunction, double dropoutRate) {
+        this(filterSize, numFilters, 1, activationFunction, dropoutRate);
+    }
+
     public ConvolutionalLayer(int filterSize, int numFilters, ActivationFunction activationFunction) {
-        this(filterSize, numFilters, 1, activationFunction);
+        this(filterSize, numFilters, 1, activationFunction, 0);
+    }
+
+    public ConvolutionalLayer(int filterSize, int numFilters, double dropoutRate) {
+        this(filterSize, numFilters, 1, new ReLU(), dropoutRate);
     }
 
     public ConvolutionalLayer(int filterSize, int numFilters) {
-        this(filterSize, numFilters, 1, new ReLU());
+        this(filterSize, numFilters, 1, new ReLU(), 0);
     }
 
     private void initializeFilters(int inputDepth) {
@@ -46,7 +60,7 @@ public class ConvolutionalLayer implements Layer {
                 }
             }
         }
-        initializeAccumulatedGradients();  // Инициализируем градиенты после инициализации фильтров
+        initializeAccumulatedGradients();  // Initialize gradients after initializing filters
     }
 
     private void initializeBiases() {
@@ -61,6 +75,19 @@ public class ConvolutionalLayer implements Layer {
             accumulatedFilterGradients[f] = new double[filters[f].length][filterSize][filterSize];
         }
         accumulatedBiasGradients = new double[numFilters];
+    }
+
+    private double[][][] generateDropoutMask(int depth, int height, int width, double rate) {
+        Random rand = new Random();
+        double[][][] mask = new double[depth][height][width];
+        for (int d = 0; d < depth; d++) {
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    mask[d][i][j] = rand.nextDouble() >= rate ? 1.0 : 0.0;
+                }
+            }
+        }
+        return mask;
     }
 
     @Override
@@ -91,6 +118,18 @@ public class ConvolutionalLayer implements Layer {
                 }
             }
         }
+
+        if (isTraining) {
+            dropoutMask = generateDropoutMask(numFilters, outputSize, outputSize, dropoutRate);
+            for (int f = 0; f < numFilters; f++) {
+                for (int i = 0; i < outputSize; i++) {
+                    for (int j = 0; j < outputSize; j++) {
+                        activatedOutput[f][i][j] *= dropoutMask[f][i][j];
+                    }
+                }
+            }
+        }
+
         return activatedOutput;
     }
 
@@ -106,6 +145,17 @@ public class ConvolutionalLayer implements Layer {
             for (int i = 0; i < outputSize; i++) {
                 for (int j = 0; j < outputSize; j++) {
                     gradient[f][i][j] *= activationFunction.derivative(activatedOutput[f][i][j]);
+                }
+            }
+        }
+
+        // Apply dropout mask to the gradient during training
+        if (isTraining) {
+            for (int f = 0; f < numFilters; f++) {
+                for (int i = 0; i < outputSize; i++) {
+                    for (int j = 0; j < outputSize; j++) {
+                        gradient[f][i][j] *= dropoutMask[f][i][j];
+                    }
                 }
             }
         }
@@ -156,7 +206,7 @@ public class ConvolutionalLayer implements Layer {
     @Override
     public void resetGradients() {
         if (filters[0] == null) {
-            return; // Фильтры не инициализированы, пропускаем сброс градиентов
+            return; // Filters are not initialized, skip resetting gradients
         }
         for (int f = 0; f < numFilters; f++) {
             for (int d = 0; d < filters[f].length; d++) {
@@ -168,5 +218,9 @@ public class ConvolutionalLayer implements Layer {
             }
             accumulatedBiasGradients[f] = 0;
         }
+    }
+
+    public void setTraining(boolean isTraining) {
+        this.isTraining = isTraining;
     }
 }

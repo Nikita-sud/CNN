@@ -16,7 +16,7 @@ public class Main {
 
         cnn.addLayer(new FullyConnectedLayer(784, 60, new ReLU()));
         cnn.addLayer(new FullyConnectedLayer(60, 10, new ReLU()));
-        cnn.addLayer(new SoftmaxLayer());      
+        cnn.addLayer(new SoftmaxLayer());    
 
         String trainImagesFile = "data/train-images.idx3-ubyte";
         String trainLabelsFile = "data/train-labels.idx1-ubyte";
@@ -26,7 +26,7 @@ public class Main {
         String testLabelsFile = "data/t10k-labels.idx1-ubyte";
         List<ImageData> testDataset = MNISTReader.readMNISTData(testImagesFile, testLabelsFile);
 
-        cnn.SGD(trainDataset, 10, 32, testDataset);
+        cnn.SGD(trainDataset, 20, 32, testDataset);
 
         double[][][] input = testDataset.get(0).imageData;
         double[][][] output = cnn.forward(input);
