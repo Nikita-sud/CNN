@@ -3,6 +3,7 @@ import cnn.interfaces.Layer;
 import cnn.utils.MatrixUtils;
 
 public class SoftmaxLayer implements Layer {
+    @SuppressWarnings("unused")
     private double[][][] input;
 
     @Override
@@ -38,18 +39,7 @@ public class SoftmaxLayer implements Layer {
 
     @Override
     public double[][][] backward(double[][][] gradient) {
-        double[] postActivationGradient = MatrixUtils.flatten(gradient);
-        double[] softmaxOutput = MatrixUtils.flatten(input);
-        double[] preActivationGradient = softmaxDerivative(softmaxOutput, postActivationGradient);
-
-        return new double[][][]{{preActivationGradient}};
-    }
-
-    private double[] softmaxDerivative(double[] output, double[] target) {
-        double[] gradient = new double[output.length];
-        for (int i = 0; i < output.length; i++) {
-            gradient[i] = output[i] - target[i];
-        }
+        // Просто верните градиент, не учитывая производную softmax здесь
         return gradient;
     }
 

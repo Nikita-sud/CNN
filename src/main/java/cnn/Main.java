@@ -25,7 +25,7 @@ public class Main {
         String testLabelsFile = "data/t10k-labels.idx1-ubyte";
         List<ImageData> testDataset = MNISTReader.readMNISTData(testImagesFile, testLabelsFile);
 
-        cnn.SGD(trainDataset, 10, 100, testDataset);
+        cnn.SGD(trainDataset, 10, 32, testDataset);
 
         double[][][] input = testDataset.get(0).imageData;
         double[][][] output = cnn.forward(input);
