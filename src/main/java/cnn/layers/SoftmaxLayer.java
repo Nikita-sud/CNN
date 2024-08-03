@@ -1,6 +1,5 @@
 package cnn.layers;
 import cnn.interfaces.Layer;
-import cnn.utils.MatrixUtils;
 
 public class SoftmaxLayer implements Layer {
     @SuppressWarnings("unused")
@@ -9,7 +8,7 @@ public class SoftmaxLayer implements Layer {
     @Override
     public double[][][] forward(double[][][] input) {
         this.input = input;
-        double[] flattenedInput = MatrixUtils.flatten(input);
+        double[] flattenedInput = input[0][0];
         double[] softmaxOutput = softmax(flattenedInput);
         return new double[][][]{{softmaxOutput}};
     }

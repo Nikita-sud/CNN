@@ -1,5 +1,6 @@
 package cnn;
 
+import cnn.layers.FlattenLayer;
 import cnn.layers.FullyConnectedLayer;
 import cnn.layers.SoftmaxLayer;
 import cnn.utils.ImageData;
@@ -13,7 +14,8 @@ public class Main {
     public static void main(String[] args) throws IOException {
         double learningRate = 0.1;
         CNN cnn = new CNN(learningRate);
-
+        
+        cnn.addLayer(new FlattenLayer());
         cnn.addLayer(new FullyConnectedLayer(784, 60, new ReLU()));
         cnn.addLayer(new FullyConnectedLayer(60, 10, new ReLU()));
         cnn.addLayer(new SoftmaxLayer());    

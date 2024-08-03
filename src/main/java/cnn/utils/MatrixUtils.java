@@ -145,23 +145,6 @@ public class MatrixUtils {
         return result;
     }
 
-    // Flattening
-    public static double[] flatten(double[][][] input) {
-        int depth = input.length;
-        int height = input[0].length;
-        int width = input[0][0].length;
-        double[] flattened = new double[depth * height * width];
-        
-        int index = 0;
-        for (int d = 0; d < depth; d++) {
-            for (int h = 0; h < height; h++) {
-                for (int w = 0; w < width; w++) {
-                    flattened[index++] = input[d][h][w];
-                }
-            }
-        }
-        return flattened;
-    }
 
     // Unflattening
     public static double[][][] unflatten(double[] input, int depth, int height, int width) {

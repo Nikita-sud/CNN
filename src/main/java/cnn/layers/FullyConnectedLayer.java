@@ -14,23 +14,15 @@ public class FullyConnectedLayer implements Layer {
     private ActivationFunction activationFunction;
     private double[][] accumulatedWeightGradients;
     private double[] accumulatedBiasGradients;
-    private double dropoutRate;
-    private double[] dropoutMask;
-    private boolean isTraining;
 
-    public FullyConnectedLayer(int inputSize, int outputSize, ActivationFunction activationFunction, double dropoutRate) {
+    public FullyConnectedLayer(int inputSize, int outputSize, ActivationFunction activationFunction) {
         this.inputSize = inputSize;
         this.outputSize = outputSize;
         this.weights = new double[inputSize][outputSize];
         this.biases = new double[outputSize];
         this.activationFunction = activationFunction;
-        this.dropoutRate = dropoutRate;
-        this.isTraining = true;
         initializeWeights();
         initializeAccumulatedGradients();
-    }
-    public FullyConnectedLayer(int inputSize, int outputSize, ActivationFunction activationFunction) {
-        this(inputSize, outputSize, activationFunction, 0);
     }
 
     private void initializeWeights() {
@@ -50,26 +42,10 @@ public class FullyConnectedLayer implements Layer {
         accumulatedBiasGradients = new double[outputSize];
     }
 
-    private double[] generateDropoutMask(int size, double rate) {
-        Random rand = new Random();
-        double[] mask = new double[size];
-        for (int i = 0; i < size; i++) {
-            mask[i] = rand.nextDouble() >= rate ? 1.0 : 0.0;
-        }
-        return mask;
-    }
-
     @Override
     public double[][][] forward(double[][][] input) {
         this.input = input;
-        double[] flattenedInput = MatrixUtils.flatten(input);
-        
-        if (isTraining) {
-            dropoutMask = generateDropoutMask(flattenedInput.length, dropoutRate);
-            for (int i = 0; i < flattenedInput.length; i++) {
-                flattenedInput[i] *= dropoutMask[i];
-            }
-        }
+        double[] flattenedInput = input[0][0];
 
         double[] preActivation = MatrixUtils.multiply(flattenedInput, weights, biases);
         double[] postActivation = new double[outputSize];
@@ -81,10 +57,10 @@ public class FullyConnectedLayer implements Layer {
 
     @Override
     public double[][][] backward(double[][][] gradient) {
-        double[] postActivationGradient = MatrixUtils.flatten(gradient);
+        double[] postActivationGradient = gradient[0][0];
         double[] preActivationGradient = new double[outputSize];
 
-        double[] flattenedInput = MatrixUtils.flatten(input);
+        double[] flattenedInput = input[0][0];
         double[] preActivation = MatrixUtils.multiply(flattenedInput, weights, biases);
 
         for (int i = 0; i < outputSize; i++) {
@@ -112,13 +88,7 @@ public class FullyConnectedLayer implements Layer {
             accumulatedBiasGradients[j] += biasGradient[j];
         }
 
-        if (isTraining) {
-            for (int i = 0; i < inputGradient.length; i++) {
-                inputGradient[i] *= dropoutMask[i];
-            }
-        }
-
-        return MatrixUtils.unflatten(inputGradient, input.length, input[0].length, input[0][0].length);
+        return new double[][][]{{inputGradient}};
     }
 
     @Override
@@ -145,9 +115,5 @@ public class FullyConnectedLayer implements Layer {
         for (int j = 0; j < outputSize; j++) {
             accumulatedBiasGradients[j] = 0;
         }
-    }
-
-    public void setTraining(boolean isTraining) {
-        this.isTraining = isTraining;
     }
 }
