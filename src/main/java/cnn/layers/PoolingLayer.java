@@ -1,9 +1,9 @@
 package cnn.layers;
 
-import cnn.interfaces.Layer;
+import cnn.interfaces.AdaptiveLayer;
 import cnn.utils.MatrixUtils;
 
-public class PoolingLayer implements Layer {
+public class PoolingLayer implements AdaptiveLayer {
     public enum PoolingType {
         MAX,
         AVERAGE
@@ -16,6 +16,12 @@ public class PoolingLayer implements Layer {
     public PoolingLayer(int poolSize, PoolingType poolingType) {
         this.poolSize = poolSize;
         this.poolingType = poolingType;
+    }
+
+    @Override
+    public void initialize(int... inputShape) {
+        // Pooling layer does not need to initialize anything specific
+        // but we need to implement this method because of the AdaptiveLayer interface
     }
 
     @Override
@@ -79,12 +85,9 @@ public class PoolingLayer implements Layer {
     }
 
     @Override
-    public void updateParameters(double learningRate, int miniBatchSize) {
-        // Pooling layers do not have parameters to update.
-    }
-
-    @Override
-    public void resetGradients() {
-        // Pooling layers do not have gradients to reset.
+    public int[] getOutputShape(int... inputShape) {
+        int inputSize = inputShape[1];
+        int outputSize = inputSize / poolSize;
+        return new int[]{inputShape[0], outputSize, outputSize};
     }
 }

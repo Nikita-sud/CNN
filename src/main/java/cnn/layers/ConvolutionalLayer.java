@@ -1,11 +1,12 @@
 package cnn.layers;
 
-import cnn.interfaces.Layer;
 import cnn.utils.MatrixUtils;
 import cnn.utils.ReLU;
 import cnn.interfaces.ActivationFunction;
+import cnn.interfaces.AdaptiveLayer;
+import cnn.interfaces.ParameterizedLayer;
 
-public class ConvolutionalLayer implements Layer {
+public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer{
     private int filterSize;
     private int numFilters;
     private int stride;
@@ -21,10 +22,7 @@ public class ConvolutionalLayer implements Layer {
         this.filterSize = filterSize;
         this.numFilters = numFilters;
         this.stride = stride;
-        this.filters = new double[numFilters][][][];
-        this.biases = new double[numFilters];
         this.activationFunction = activationFunction;
-        initializeBiases();
     }
 
     public ConvolutionalLayer(int filterSize, int numFilters, ActivationFunction activationFunction) {
@@ -36,8 +34,8 @@ public class ConvolutionalLayer implements Layer {
     }
 
     private void initializeFilters(int inputDepth) {
+        filters = new double[numFilters][inputDepth][filterSize][filterSize];
         for (int f = 0; f < numFilters; f++) {
-            filters[f] = new double[inputDepth][filterSize][filterSize];
             for (int d = 0; d < inputDepth; d++) {
                 for (int i = 0; i < filterSize; i++) {
                     for (int j = 0; j < filterSize; j++) {
@@ -46,10 +44,10 @@ public class ConvolutionalLayer implements Layer {
                 }
             }
         }
-        initializeAccumulatedGradients();  // Initialize gradients after initializing filters
     }
 
     private void initializeBiases() {
+        biases = new double[numFilters];
         for (int i = 0; i < numFilters; i++) {
             biases[i] = Math.random();
         }
@@ -61,6 +59,14 @@ public class ConvolutionalLayer implements Layer {
             accumulatedFilterGradients[f] = new double[filters[f].length][filterSize][filterSize];
         }
         accumulatedBiasGradients = new double[numFilters];
+    }
+
+    @Override
+    public void initialize(int... inputShape) {
+        int inputDepth = inputShape[0];
+        initializeFilters(inputDepth);
+        initializeBiases();
+        initializeAccumulatedGradients();
     }
 
     @Override
@@ -102,7 +108,6 @@ public class ConvolutionalLayer implements Layer {
         int outputSize = activatedOutput[0].length;
         double[][][] inputGradient = new double[inputDepth][inputSize][inputSize];
 
-        // Backpropagation through activation function
         for (int f = 0; f < numFilters; f++) {
             for (int i = 0; i < outputSize; i++) {
                 for (int j = 0; j < outputSize; j++) {
@@ -111,7 +116,6 @@ public class ConvolutionalLayer implements Layer {
             }
         }
 
-        // Calculate gradients for filters and inputs
         for (int f = 0; f < numFilters; f++) {
             for (int d = 0; d < inputDepth; d++) {
                 double[][] filterGrad = MatrixUtils.convolve(input[d], gradient[f], stride);
@@ -145,19 +149,19 @@ public class ConvolutionalLayer implements Layer {
                 for (int i = 0; i < filterSize; i++) {
                     for (int j = 0; j < filterSize; j++) {
                         filters[f][d][i][j] -= learningRate * accumulatedFilterGradients[f][d][i][j] / miniBatchSize;
-                        accumulatedFilterGradients[f][d][i][j] = 0; // Reset accumulated gradient
+                        accumulatedFilterGradients[f][d][i][j] = 0;
                     }
                 }
             }
             biases[f] -= learningRate * accumulatedBiasGradients[f] / miniBatchSize;
-            accumulatedBiasGradients[f] = 0; // Reset accumulated gradient
+            accumulatedBiasGradients[f] = 0;
         }
     }
 
     @Override
     public void resetGradients() {
         if (filters[0] == null) {
-            return; // Filters are not initialized, skip resetting gradients
+            return;
         }
         for (int f = 0; f < numFilters; f++) {
             for (int d = 0; d < filters[f].length; d++) {
@@ -169,5 +173,12 @@ public class ConvolutionalLayer implements Layer {
             }
             accumulatedBiasGradients[f] = 0;
         }
+    }
+
+    @Override
+    public int[] getOutputShape(int... inputShape) {
+        int inputSize = inputShape[1];
+        int outputSize = (inputSize - filterSize) / stride + 1;
+        return new int[]{numFilters, outputSize, outputSize};
     }
 }

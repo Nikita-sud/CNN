@@ -1,11 +1,13 @@
 package cnn.layers;
 
-import cnn.interfaces.Layer;
 import cnn.utils.MatrixUtils;
 import cnn.interfaces.ActivationFunction;
+import cnn.interfaces.AdaptiveLayer;
+import cnn.interfaces.ParameterizedLayer;
+
 import java.util.Random;
 
-public class FullyConnectedLayer implements Layer {
+public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer{
     private int inputSize;
     private int outputSize;
     private double[][] weights;
@@ -15,12 +17,16 @@ public class FullyConnectedLayer implements Layer {
     private double[][] accumulatedWeightGradients;
     private double[] accumulatedBiasGradients;
 
-    public FullyConnectedLayer(int inputSize, int outputSize, ActivationFunction activationFunction) {
-        this.inputSize = inputSize;
+    public FullyConnectedLayer(int outputSize, ActivationFunction activationFunction) {
         this.outputSize = outputSize;
+        this.activationFunction = activationFunction;
+    }
+
+    @Override
+    public void initialize(int... inputShape) {
+        this.inputSize = inputShape[0];
         this.weights = new double[inputSize][outputSize];
         this.biases = new double[outputSize];
-        this.activationFunction = activationFunction;
         initializeWeights();
         initializeAccumulatedGradients();
     }
@@ -96,12 +102,12 @@ public class FullyConnectedLayer implements Layer {
         for (int i = 0; i < inputSize; i++) {
             for (int j = 0; j < outputSize; j++) {
                 weights[i][j] -= learningRate * accumulatedWeightGradients[i][j] / miniBatchSize;
-                accumulatedWeightGradients[i][j] = 0; // Reset accumulated gradient
+                accumulatedWeightGradients[i][j] = 0;
             }
         }
         for (int j = 0; j < outputSize; j++) {
             biases[j] -= learningRate * accumulatedBiasGradients[j] / miniBatchSize;
-            accumulatedBiasGradients[j] = 0; // Reset accumulated gradient
+            accumulatedBiasGradients[j] = 0;
         }
     }
 
@@ -115,5 +121,14 @@ public class FullyConnectedLayer implements Layer {
         for (int j = 0; j < outputSize; j++) {
             accumulatedBiasGradients[j] = 0;
         }
+    }
+
+    @Override
+    public int[] getOutputShape(int... inputShape) {
+        return new int[]{outputSize};
+    }
+
+    public int getOutputSize() {
+        return outputSize;
     }
 }

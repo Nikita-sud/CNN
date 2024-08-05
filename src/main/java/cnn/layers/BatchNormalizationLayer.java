@@ -1,8 +1,8 @@
 package cnn.layers;
 
-import cnn.interfaces.Layer;
+import cnn.interfaces.ParameterizedLayer;
 
-public class BatchNormalizationLayer implements Layer {
+public class BatchNormalizationLayer implements ParameterizedLayer{
     private double[] gamma;
     private double[] beta;
     private double[] mean;
@@ -108,5 +108,10 @@ public class BatchNormalizationLayer implements Layer {
             gammaGradient[i] = 0.0;
             betaGradient[i] = 0.0;
         }
+    }
+
+    @Override
+    public int[] getOutputShape(int... inputShape) {
+        return inputShape;
     }
 }

@@ -66,17 +66,12 @@ public class DropoutLayer implements Layer {
         return outputGradient;
     }
 
-    @Override
-    public void updateParameters(double learningRate, int miniBatchSize) {
-        // Dropout has no parameters to update
-    }
-
-    @Override
-    public void resetGradients() {
-        // Dropout has no gradients to reset
-    }
-
     public void setTraining(boolean isTraining) {
         this.isTraining = isTraining;
+    }
+
+    @Override
+    public int[] getOutputShape(int... inputShape) {
+        return inputShape; // Dropout не меняет размерность
     }
 }

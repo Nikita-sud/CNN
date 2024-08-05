@@ -1,12 +1,19 @@
 package cnn.layers;
 
-import cnn.interfaces.Layer;
+import cnn.interfaces.AdaptiveLayer;
 
-public class FlattenLayer implements Layer {
+public class FlattenLayer implements AdaptiveLayer {
 
     private int depth;
     private int height;
     private int width;
+
+    @Override
+    public void initialize(int... inputShape) {
+        this.depth = inputShape[0];
+        this.height = inputShape[1];
+        this.width = inputShape[2];
+    }
 
     @Override
     public double[][][] forward(double[][][] input) {
@@ -40,14 +47,10 @@ public class FlattenLayer implements Layer {
 
         return reshapedGradient;
     }
-
+    
     @Override
-    public void updateParameters(double learningRate, int miniBatchSize) {
-        // Flatten layer has no parameters to update
-    }
-
-    @Override
-    public void resetGradients() {
-        // Flatten layer has no gradients to reset
+    public int[] getOutputShape(int... inputShape) {
+        int flatSize = inputShape[0] * inputShape[1] * inputShape[2];
+        return new int[]{flatSize};
     }
 }

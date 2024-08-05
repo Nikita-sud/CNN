@@ -1,6 +1,8 @@
 package cnn;
 
+import cnn.interfaces.AdaptiveLayer;
 import cnn.interfaces.Layer;
+import cnn.interfaces.ParameterizedLayer;
 import cnn.utils.ImageData;
 
 import java.util.ArrayList;
@@ -10,13 +12,26 @@ import java.util.List;
 public class CNN {
     private List<Layer> layers;
     private double learningRate;
+    private int[] inputShape;
 
-    public CNN(double learningRate) {
+    public CNN(double learningRate, int... inputShape) {
         this.layers = new ArrayList<>();
         this.learningRate = learningRate;
+        this.inputShape = inputShape;
     }
 
     public void addLayer(Layer layer) {
+        if (layers.isEmpty()) {
+            if (layer instanceof AdaptiveLayer) {
+                ((AdaptiveLayer) layer).initialize(inputShape);
+                inputShape = layer.getOutputShape(inputShape);
+            }
+        } else {
+            if (layer instanceof AdaptiveLayer) {
+                ((AdaptiveLayer) layer).initialize(inputShape);
+                inputShape = layer.getOutputShape(inputShape);
+            }
+        }
         layers.add(layer);
     }
 
@@ -38,13 +53,17 @@ public class CNN {
 
     public void updateParameters(int miniBatchSize) {
         for (Layer layer : layers) {
-            layer.updateParameters(learningRate, miniBatchSize);
+            if (layer instanceof ParameterizedLayer) {
+                ((ParameterizedLayer) layer).updateParameters(learningRate, miniBatchSize);
+            }
         }
     }
 
     public void resetGradients() {
         for (Layer layer : layers) {
-            layer.resetGradients();
+            if (layer instanceof ParameterizedLayer) {
+                ((ParameterizedLayer) layer).resetGradients();
+            }
         }
     }
 
@@ -79,16 +98,6 @@ public class CNN {
             backward(lossGradient);
         }
         updateParameters(miniBatchSize);
-    }
-
-    @SuppressWarnings("unused")
-    private double computeLoss(double[] output, double[] target) {
-        double loss = 0;
-        for (int i = 0; i < output.length; i++) {
-            double adjustedOutput = Math.max(Math.min(output[i], 1 - 1e-15), 1e-15);
-            loss -= target[i] * Math.log(adjustedOutput) + (1 - target[i]) * Math.log(1 - adjustedOutput);
-        }
-        return loss / output.length;
     }
 
     private double[][][] computeLossGradient(double[] output, double[] target) {

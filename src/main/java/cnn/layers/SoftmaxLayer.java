@@ -1,4 +1,5 @@
 package cnn.layers;
+
 import cnn.interfaces.Layer;
 
 public class SoftmaxLayer implements Layer {
@@ -43,12 +44,8 @@ public class SoftmaxLayer implements Layer {
     }
 
     @Override
-    public void updateParameters(double learningRate, int miniBatchSize) {
-        // Softmax layers do not have parameters to update.
-    }
-
-    @Override
-    public void resetGradients() {
-        // Softmax layers do not have parameters to reset.
+    public int[] getOutputShape(int... inputShape) {
+        // Softmax layer does not change the shape of the input
+        return new int[]{inputShape[0]};
     }
 }
