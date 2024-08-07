@@ -1,7 +1,19 @@
 package cnn.utils;
 
+/**
+ * A utility class for various matrix operations used in convolutional neural networks.
+ */
 public class MatrixUtils {
 
+    /**
+     * Applies a filter to a specific region of the input matrix starting at (startX, startY).
+     *
+     * @param input the input matrix
+     * @param filter the filter matrix
+     * @param startX the starting X-coordinate
+     * @param startY the starting Y-coordinate
+     * @return the sum of element-wise multiplication of the filter and the specified region of the input matrix
+     */
     public static double applyFilter(double[][] input, double[][] filter, int startX, int startY) {
         int filterSize = filter.length;
         double sum = 0;
@@ -18,6 +30,12 @@ public class MatrixUtils {
         return sum;
     }
 
+    /**
+     * Rotates a square matrix by 180 degrees.
+     *
+     * @param matrix the matrix to rotate
+     * @return a new matrix that is the 180-degree rotation of the input matrix
+     */
     public static double[][] rotate180(double[][] matrix) {
         int n = matrix.length;
         double[][] rotated = new double[n][n];
@@ -29,6 +47,14 @@ public class MatrixUtils {
         return rotated;
     }
 
+    /**
+     * Performs a convolution operation on the input matrix using the given filter and stride.
+     *
+     * @param input the input matrix
+     * @param filter the filter matrix
+     * @param stride the stride for the convolution
+     * @return the resulting matrix after the convolution
+     */
     public static double[][] convolve(double[][] input, double[][] filter, int stride) {
         int inputSize = input.length;
         int filterSize = filter.length;
@@ -43,6 +69,13 @@ public class MatrixUtils {
         return output;
     }
 
+    /**
+     * Performs a full convolution operation on the input matrix using the given filter.
+     *
+     * @param input the input matrix
+     * @param filter the filter matrix
+     * @return the resulting matrix after the full convolution
+     */
     public static double[][] fullConvolve(double[][] input, double[][] filter) {
         int inputSize = input.length;
         int filterSize = filter.length;
@@ -57,6 +90,13 @@ public class MatrixUtils {
         return output;
     }
 
+    /**
+     * Applies max pooling to the input matrix with the specified pool size.
+     *
+     * @param input the input matrix
+     * @param poolSize the size of the pooling window
+     * @return the resulting matrix after max pooling
+     */
     public static double[][] maxPooling(double[][] input, int poolSize) {
         int inputSize = input.length;
         int outputSize = inputSize / poolSize;
@@ -78,6 +118,13 @@ public class MatrixUtils {
         return output;
     }
 
+    /**
+     * Applies average pooling to the input matrix with the specified pool size.
+     *
+     * @param input the input matrix
+     * @param poolSize the size of the pooling window
+     * @return the resulting matrix after average pooling
+     */
     public static double[][] averagePooling(double[][] input, int poolSize) {
         int inputSize = input.length;
         int outputSize = inputSize / poolSize;
@@ -97,7 +144,14 @@ public class MatrixUtils {
         return output;
     }
 
-    // Перемножение матриц
+    /**
+     * Multiplies a vector by a matrix and adds a bias vector.
+     *
+     * @param input the input vector
+     * @param weights the weight matrix
+     * @param biases the bias vector
+     * @return the resulting vector after the multiplication and bias addition
+     */
     public static double[] multiply(double[] input, double[][] weights, double[] biases) {
         int inputSize = input.length;
         int outputSize = biases.length;
@@ -113,7 +167,13 @@ public class MatrixUtils {
         return output;
     }
 
-    // Addition of two matrices
+    /**
+     * Adds two 3D matrices element-wise.
+     *
+     * @param a the first 3D matrix
+     * @param b the second 3D matrix
+     * @return the resulting 3D matrix after element-wise addition
+     */
     public static double[][][] add(double[][][] a, double[][][] b) {
         int depth = a.length;
         int height = a[0].length;
@@ -129,7 +189,13 @@ public class MatrixUtils {
         return result;
     }
 
-    // Division of a matrix by a scalar
+    /**
+     * Divides a 3D matrix by a scalar value.
+     *
+     * @param a the 3D matrix
+     * @param scalar the scalar value
+     * @return the resulting 3D matrix after division
+     */
     public static double[][][] divide(double[][][] a, double scalar) {
         int depth = a.length;
         int height = a[0].length;
@@ -145,8 +211,15 @@ public class MatrixUtils {
         return result;
     }
 
-
-    // Unflattening
+    /**
+     * Unflattens a 1D array into a 3D matrix with the specified dimensions.
+     *
+     * @param input the input 1D array
+     * @param depth the depth of the resulting 3D matrix
+     * @param height the height of the resulting 3D matrix
+     * @param width the width of the resulting 3D matrix
+     * @return the resulting 3D matrix after unflattening
+     */
     public static double[][][] unflatten(double[] input, int depth, int height, int width) {
         double[][][] unflattened = new double[depth][height][width];
         

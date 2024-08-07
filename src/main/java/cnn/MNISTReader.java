@@ -8,8 +8,18 @@ import java.util.List;
 
 import cnn.utils.ImageData;
 
+/**
+ * A utility class for reading MNIST data from IDX file format.
+ * The MNIST dataset consists of images of handwritten digits and their corresponding labels.
+ */
 public class MNISTReader {
 
+    /**
+     * Main method for reading and processing the MNIST data.
+     *
+     * @param args command-line arguments
+     * @throws IOException if there is an error reading the files
+     */
     public static void main(String[] args) throws IOException {
         String imagesFile = "data/train-images.idx3-ubyte";
         String labelsFile = "data/train-labels.idx1-ubyte";
@@ -20,6 +30,14 @@ public class MNISTReader {
         // Use the dataset as needed
     }
 
+    /**
+     * Reads MNIST image and label data from IDX files and returns a list of ImageData objects.
+     *
+     * @param imagesFile the path to the images IDX file
+     * @param labelsFile the path to the labels IDX file
+     * @return a list of ImageData objects containing the image data and corresponding labels
+     * @throws IOException if there is an error reading the files
+     */
     @SuppressWarnings("unused")
     public static List<ImageData> readMNISTData(String imagesFile, String labelsFile) throws IOException {
         try (DataInputStream images = new DataInputStream(new BufferedInputStream(new FileInputStream(imagesFile)));

@@ -3,16 +3,31 @@ package cnn.layers;
 import cnn.interfaces.Layer;
 import java.util.Random;
 
+/**
+ * A dropout layer in a neural network, which randomly sets a fraction of input units to zero during training.
+ * This layer helps prevent overfitting by introducing noise during training.
+ */
 public class DropoutLayer implements Layer {
     private double rate;
     private double[][][] mask;
     private boolean isTraining;
 
+    /**
+     * Constructs a DropoutLayer with the specified dropout rate.
+     *
+     * @param rate the probability of dropping out a unit, between 0.0 and 1.0
+     */
     public DropoutLayer(double rate) {
         this.rate = rate;
         this.isTraining = true;
     }
 
+    /**
+     * Performs the forward pass through the dropout layer. During training, randomly sets a fraction of input units to zero.
+     *
+     * @param input a 3D array representing the input tensor
+     * @return a 3D array representing the output tensor after applying dropout
+     */
     @Override
     public double[][][] forward(double[][][] input) {
         if (!isTraining) {
@@ -39,6 +54,13 @@ public class DropoutLayer implements Layer {
         return output;
     }
 
+    /**
+     * Performs the backward pass through the dropout layer, scaling the gradient by the dropout mask.
+     *
+     * @param gradient a 3D array representing the gradient of the loss with respect to the output
+     * @return a 3D array representing the gradient of the loss with respect to the input
+     * @throws IllegalStateException if the dropout mask dimensions do not match the gradient dimensions
+     */
     @Override
     public double[][][] backward(double[][][] gradient) {
         if (!isTraining) {
@@ -66,12 +88,23 @@ public class DropoutLayer implements Layer {
         return outputGradient;
     }
 
+    /**
+     * Sets the training mode of the dropout layer.
+     *
+     * @param isTraining true if the layer is in training mode, false if in inference mode
+     */
     public void setTraining(boolean isTraining) {
         this.isTraining = isTraining;
     }
 
+    /**
+     * Computes the output shape of the layer given the input shape.
+     *
+     * @param inputShape an array of integers representing the dimensions of the input tensor
+     * @return an array of integers representing the dimensions of the output tensor, which is the same as the input shape
+     */
     @Override
     public int[] getOutputShape(int... inputShape) {
-        return inputShape; // Dropout не меняет размерность
+        return inputShape; // Dropout does not change the dimensions
     }
 }

@@ -1,10 +1,8 @@
 package cnn;
 
-import cnn.layers.FlattenLayer;
-import cnn.layers.FullyConnectedLayer;
-import cnn.layers.SoftmaxLayer;
-import cnn.utils.ImageData;
-import cnn.utils.ReLU;
+import cnn.layers.*;
+import cnn.layers.PoolingLayer.PoolingType;
+import cnn.utils.*;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,11 +12,13 @@ public class Main {
     public static void main(String[] args) throws IOException {
         double learningRate = 0.1;
         CNN cnn = new CNN(learningRate,1, 28, 28);
-        
+
+        cnn.addLayer(new ConvolutionalLayer(3, 3, 1, new ELU(1)));
+        cnn.addLayer(new PoolingLayer(2, PoolingType.MAX));
         cnn.addLayer(new FlattenLayer());
-        cnn.addLayer(new FullyConnectedLayer(60, new ReLU()));
-        cnn.addLayer(new FullyConnectedLayer(10, new ReLU()));
-        cnn.addLayer(new SoftmaxLayer());    
+        cnn.addLayer(new FullyConnectedLayer(60, new ELU(1)));
+        cnn.addLayer(new FullyConnectedLayer(10, new ELU(1)));
+        cnn.addLayer(new SoftmaxLayer());  
 
         String trainImagesFile = "data/train-images.idx3-ubyte";
         String trainLabelsFile = "data/train-labels.idx1-ubyte";
@@ -30,10 +30,10 @@ public class Main {
 
         cnn.SGD(trainDataset, 20, 32, testDataset);
 
-        double[][][] input = testDataset.get(0).imageData;
+        double[][][] input = testDataset.get(0).getImageData();
         double[][][] output = cnn.forward(input);
 
         System.out.println("CNN output: " + Arrays.toString(output[0][0]));
-        System.out.println("Actual output: " + Arrays.toString(testDataset.get(0).label));
+        System.out.println("Actual output: " + Arrays.toString(testDataset.get(0).getLabel()));
     }
 }

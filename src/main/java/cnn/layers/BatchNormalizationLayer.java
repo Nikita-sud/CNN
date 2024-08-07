@@ -2,7 +2,12 @@ package cnn.layers;
 
 import cnn.interfaces.ParameterizedLayer;
 
-public class BatchNormalizationLayer implements ParameterizedLayer{
+/**
+ * A batch normalization layer in a neural network.
+ * This layer normalizes the input to have zero mean and unit variance,
+ * and then applies a scale (gamma) and shift (beta) transformation.
+ */
+public class BatchNormalizationLayer implements ParameterizedLayer {
     private double[] gamma;
     private double[] beta;
     private double[] mean;
@@ -12,6 +17,11 @@ public class BatchNormalizationLayer implements ParameterizedLayer{
     private double[] betaGradient;
     private double epsilon = 1e-5;
 
+    /**
+     * Constructs a BatchNormalizationLayer with the specified depth.
+     *
+     * @param depth the number of channels in the input tensor
+     */
     public BatchNormalizationLayer(int depth) {
         gamma = new double[depth];
         beta = new double[depth];
@@ -26,6 +36,13 @@ public class BatchNormalizationLayer implements ParameterizedLayer{
         }
     }
 
+    /**
+     * Performs the forward pass through the batch normalization layer.
+     * Normalizes the input tensor and applies the scale and shift transformation.
+     *
+     * @param input a 3D array representing the input tensor
+     * @return a 3D array representing the output tensor after batch normalization
+     */
     @Override
     public double[][][] forward(double[][][] input) {
         int depth = input.length;
@@ -61,6 +78,14 @@ public class BatchNormalizationLayer implements ParameterizedLayer{
         return output;
     }
 
+    /**
+     * Performs the backward pass through the batch normalization layer.
+     * Computes the gradients of the loss with respect to the input tensor, gamma, and beta.
+     *
+     * @param gradient a 3D array representing the gradient of the loss with respect to the output
+     * @return a 3D array representing the gradient of the loss with respect to the input
+     * @throws IllegalStateException if the dimensions of the gradient do not match the expected dimensions
+     */
     @Override
     public double[][][] backward(double[][][] gradient) {
         int depth = gradient.length;
@@ -80,11 +105,12 @@ public class BatchNormalizationLayer implements ParameterizedLayer{
             gammaGradient[d] += dL_dgamma;
             betaGradient[d] += dL_dbeta;
 
-            double dL_dx_hat = 0.0;
+            double dL_dx_hat;
             for (int i = 0; i < height; i++) {
                 for (int j = 0; j < width; j++) {
                     dL_dx_hat = gradient[d][i][j] * gamma[d];
-                    inputGradient[d][i][j] = (1.0 / (height * width)) * (1.0 / Math.sqrt(variance[d] + epsilon)) * (height * width * dL_dx_hat - dL_dgamma * x_hat[d] - dL_dbeta);
+                    inputGradient[d][i][j] = (1.0 / (height * width)) * (1.0 / Math.sqrt(variance[d] + epsilon)) * 
+                                             (height * width * dL_dx_hat - dL_dgamma * x_hat[d] - dL_dbeta);
                 }
             }
         }
@@ -92,6 +118,12 @@ public class BatchNormalizationLayer implements ParameterizedLayer{
         return inputGradient;
     }
 
+    /**
+     * Updates the parameters (gamma and beta) of the layer using the accumulated gradients.
+     *
+     * @param learningRate the learning rate to use for updating the parameters
+     * @param miniBatchSize the size of the mini-batch used for averaging the gradients
+     */
     @Override
     public void updateParameters(double learningRate, int miniBatchSize) {
         for (int i = 0; i < gamma.length; i++) {
@@ -102,6 +134,9 @@ public class BatchNormalizationLayer implements ParameterizedLayer{
         }
     }
 
+    /**
+     * Resets the accumulated gradients for gamma and beta to zero.
+     */
     @Override
     public void resetGradients() {
         for (int i = 0; i < gamma.length; i++) {
@@ -110,6 +145,12 @@ public class BatchNormalizationLayer implements ParameterizedLayer{
         }
     }
 
+    /**
+     * Computes the output shape of the layer given the input shape.
+     *
+     * @param inputShape an array of integers representing the dimensions of the input tensor
+     * @return an array of integers representing the dimensions of the output tensor, which is the same as the input shape
+     */
     @Override
     public int[] getOutputShape(int... inputShape) {
         return inputShape;
