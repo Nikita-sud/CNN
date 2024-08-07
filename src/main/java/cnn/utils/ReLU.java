@@ -1,5 +1,7 @@
 package cnn.utils;
 
+import java.io.Serializable;
+
 import cnn.interfaces.ActivationFunction;
 
 /**
@@ -8,7 +10,7 @@ import cnn.interfaces.ActivationFunction;
  * f(x) = max(0, x)
  * This activation function is used to introduce non-linearity in the network.
  */
-public class ReLU implements ActivationFunction {
+public class ReLU implements ActivationFunction, Serializable{
 
     /**
      * Applies the ReLU activation function to a single input value.

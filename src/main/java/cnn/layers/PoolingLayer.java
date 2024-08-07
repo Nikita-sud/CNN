@@ -1,5 +1,7 @@
 package cnn.layers;
 
+import java.io.Serializable;
+
 import cnn.interfaces.Layer;
 import cnn.utils.MatrixUtils;
 
@@ -7,7 +9,7 @@ import cnn.utils.MatrixUtils;
  * A pooling layer in a neural network, which reduces the spatial dimensions of the input tensor.
  * This layer can perform either max pooling or average pooling.
  */
-public class PoolingLayer implements Layer {
+public class PoolingLayer implements Layer, Serializable{
 
     /**
      * Enumeration for the type of pooling operation.

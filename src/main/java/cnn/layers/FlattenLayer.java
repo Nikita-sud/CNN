@@ -1,12 +1,14 @@
 package cnn.layers;
 
+import java.io.Serializable;
+
 import cnn.interfaces.AdaptiveLayer;
 
 /**
  * A layer that flattens a 3D input tensor (depth, height, width) into a 1D output tensor.
  * This layer is commonly used in the transition from convolutional to fully connected layers in a neural network.
  */
-public class FlattenLayer implements AdaptiveLayer {
+public class FlattenLayer implements AdaptiveLayer, Serializable {
 
     private int depth;
     private int height;

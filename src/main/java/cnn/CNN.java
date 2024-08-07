@@ -5,6 +5,12 @@ import cnn.interfaces.Layer;
 import cnn.interfaces.ParameterizedLayer;
 import cnn.utils.ImageData;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -13,7 +19,8 @@ import java.util.List;
  * A Convolutional Neural Network (CNN) class that supports forward and backward propagation, parameter updates,
  * and training using Stochastic Gradient Descent (SGD).
  */
-public class CNN {
+public class CNN implements Serializable {
+    private static final long serialVersionUID = 1L;
     private List<Layer> layers;
     private double learningRate;
     private int[] inputShape;
@@ -104,6 +111,39 @@ public class CNN {
      * @param epochs the number of epochs to train for
      * @param miniBatchSize the size of each mini-batch
      * @param testData the test data set for evaluation
+     * @param saveFilePath the file path to save the best model
+     */
+    public void SGD(List<ImageData> trainingData, int epochs, int miniBatchSize, List<ImageData> testData, String saveFilePath) {
+        int nTest = testData.size();
+        double bestAccuracy = 0.0;
+
+        for (int epoch = 0; epoch < epochs; epoch++) {
+            Collections.shuffle(trainingData);
+            List<List<ImageData>> miniBatches = createMiniBatches(trainingData, miniBatchSize);
+
+            miniBatches.parallelStream().forEach(miniBatch -> updateMiniBatch(miniBatch, miniBatchSize));
+
+            if (nTest > 0) {
+                int correct = evaluate(testData);
+                double accuracy = (double) correct / nTest;
+                System.out.println("Epoch " + (epoch + 1) + ": " + correct + " / " + nTest + " (" + accuracy * 100 + "%)");
+
+                if (accuracy > bestAccuracy) {
+                    bestAccuracy = accuracy;
+                    saveNetwork(saveFilePath);
+                    System.out.println("New best model saved with accuracy: " + bestAccuracy * 100 + "%");
+                }
+            }
+        }
+    }
+
+    /**
+     * Trains the CNN using Stochastic Gradient Descent (SGD) with mini-batches.
+     *
+     * @param trainingData the training data set
+     * @param epochs the number of epochs to train for
+     * @param miniBatchSize the size of each mini-batch
+     * @param testData the test data set for evaluation
      */
     public void SGD(List<ImageData> trainingData, int epochs, int miniBatchSize, List<ImageData> testData) {
         int nTest = testData.size();
@@ -115,7 +155,9 @@ public class CNN {
             miniBatches.parallelStream().forEach(miniBatch -> updateMiniBatch(miniBatch, miniBatchSize));
 
             if (nTest > 0) {
-                System.out.println("Epoch " + (epoch + 1) + ": " + evaluate(testData) + " / " + nTest);
+                int correct = evaluate(testData);
+                double accuracy = (double) correct / nTest;
+                System.out.println("Epoch " + (epoch + 1) + ": " + correct + " / " + nTest + " (" + accuracy * 100 + "%)");
             }
         }
     }
@@ -199,5 +241,33 @@ public class CNN {
             }
         }
         return maxIndex;
+    }
+
+    /**
+     * Saves the CNN to a file.
+     *
+     * @param filePath the path to the file where the CNN should be saved
+     */
+    public void saveNetwork(String filePath) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(filePath))) {
+            oos.writeObject(this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Loads a CNN from a file.
+     *
+     * @param filePath the path to the file from which the CNN should be loaded
+     * @return the loaded CNN
+     */
+    public static CNN loadNetwork(String filePath) {
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(filePath))) {
+            return (CNN) ois.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

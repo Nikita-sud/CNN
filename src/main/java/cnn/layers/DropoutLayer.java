@@ -1,13 +1,15 @@
 package cnn.layers;
 
 import cnn.interfaces.Layer;
+
+import java.io.Serializable;
 import java.util.Random;
 
 /**
  * A dropout layer in a neural network, which randomly sets a fraction of input units to zero during training.
  * This layer helps prevent overfitting by introducing noise during training.
  */
-public class DropoutLayer implements Layer {
+public class DropoutLayer implements Layer, Serializable {
     private double rate;
     private double[][][] mask;
     private boolean isTraining;

@@ -1,5 +1,7 @@
 package cnn.utils;
 
+import java.io.Serializable;
+
 import cnn.interfaces.ActivationFunction;
 
 /**
@@ -8,7 +10,7 @@ import cnn.interfaces.ActivationFunction;
  * f(x) = tanh(x)
  * This activation function is used to introduce non-linearity in the network.
  */
-public class Tanh implements ActivationFunction {
+public class Tanh implements ActivationFunction, Serializable{
 
     /**
      * Applies the Tanh activation function to a single input value.

@@ -1,8 +1,10 @@
 package cnn.utils;
 
+import java.io.Serializable;
+
 import cnn.interfaces.ActivationFunction;
 
-public class LeakyReLU implements ActivationFunction {
+public class LeakyReLU implements ActivationFunction, Serializable {
     private double alpha;
 
     public LeakyReLU(double alpha) {

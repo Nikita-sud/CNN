@@ -1,12 +1,14 @@
 package cnn.layers;
 
+import java.io.Serializable;
+
 import cnn.interfaces.Layer;
 
 /**
  * A softmax layer in a neural network.
  * This layer applies the softmax function to the input tensor, which is typically used as the final layer in a classification network.
  */
-public class SoftmaxLayer implements Layer {
+public class SoftmaxLayer implements Layer, Serializable{
 
     @SuppressWarnings("unused")
     private double[][][] input;

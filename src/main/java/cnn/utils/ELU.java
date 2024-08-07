@@ -1,5 +1,7 @@
 package cnn.utils;
 
+import java.io.Serializable;
+
 import cnn.interfaces.ActivationFunction;
 
 /**
@@ -8,7 +10,7 @@ import cnn.interfaces.ActivationFunction;
  * f(x) = x if x > 0, alpha * (exp(x) - 1) if x <= 0
  * This activation function is used to introduce non-linearity in the network.
  */
-public class ELU implements ActivationFunction {
+public class ELU implements ActivationFunction, Serializable{
     private double alpha;
 
     /**

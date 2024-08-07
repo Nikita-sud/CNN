@@ -10,9 +10,11 @@ import java.util.Arrays;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        double learningRate = 0.1;
+        double learningRate = 0.02;
         CNN cnn = new CNN(learningRate,1, 28, 28);
 
+        cnn.addLayer(new ConvolutionalLayer(5, 5, 1, new ELU(1)));
+        cnn.addLayer(new PoolingLayer(2, PoolingType.MAX));
         cnn.addLayer(new ConvolutionalLayer(5, 5, 1, new ELU(1)));
         cnn.addLayer(new PoolingLayer(2, PoolingType.MAX));
         cnn.addLayer(new FlattenLayer());
@@ -28,7 +30,7 @@ public class Main {
         String testLabelsFile = "data/t10k-labels.idx1-ubyte";
         List<ImageData> testDataset = MNISTReader.readMNISTData(testImagesFile, testLabelsFile);
 
-        cnn.SGD(trainDataset, 20, 32, testDataset);
+        cnn.SGD(trainDataset, 30, 32, testDataset, "savedNetwork/my_cnn.dat");
 
         double[][][] input = testDataset.get(0).getImageData();
         double[][][] output = cnn.forward(input);

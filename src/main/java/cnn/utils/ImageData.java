@@ -1,10 +1,12 @@
 package cnn.utils;
 
+import java.io.Serializable;
+
 /**
  * A class representing image data and its corresponding label.
  * This class is used to store and retrieve the input data and labels for training and evaluating a neural network.
  */
-public class ImageData {
+public class ImageData implements Serializable{
     private double[][][] imageData;
     private double[] label;
 

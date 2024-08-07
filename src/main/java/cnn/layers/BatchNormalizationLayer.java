@@ -1,5 +1,7 @@
 package cnn.layers;
 
+import java.io.Serializable;
+
 import cnn.interfaces.ParameterizedLayer;
 
 /**
@@ -7,7 +9,7 @@ import cnn.interfaces.ParameterizedLayer;
  * This layer normalizes the input to have zero mean and unit variance,
  * and then applies a scale (gamma) and shift (beta) transformation.
  */
-public class BatchNormalizationLayer implements ParameterizedLayer {
+public class BatchNormalizationLayer implements ParameterizedLayer, Serializable{
     private double[] gamma;
     private double[] beta;
     private double[] mean;

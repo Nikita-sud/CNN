@@ -1,5 +1,7 @@
 package cnn.utils;
 
+import java.io.Serializable;
+
 import cnn.interfaces.ActivationFunction;
 
 /**
@@ -8,7 +10,7 @@ import cnn.interfaces.ActivationFunction;
  * f(x) = 1 / (1 + exp(-x))
  * This activation function is used to introduce non-linearity in the network.
  */
-public class Sigmoid implements ActivationFunction {
+public class Sigmoid implements ActivationFunction, Serializable{
 
     /**
      * Applies the Sigmoid activation function to a single input value.

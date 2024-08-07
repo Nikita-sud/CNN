@@ -5,13 +5,14 @@ import cnn.interfaces.ActivationFunction;
 import cnn.interfaces.AdaptiveLayer;
 import cnn.interfaces.ParameterizedLayer;
 
+import java.io.Serializable;
 import java.util.Random;
 
 /**
  * A fully connected layer in a neural network, also known as a dense layer.
  * This layer connects every input neuron to every output neuron.
  */
-public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer {
+public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, Serializable{
     private int inputSize;
     private int outputSize;
     private double[][] weights;

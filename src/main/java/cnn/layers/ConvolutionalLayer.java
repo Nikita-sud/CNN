@@ -3,6 +3,7 @@ package cnn.layers;
 import cnn.utils.MatrixUtils;
 import cnn.utils.ReLU;
 
+import java.io.Serializable;
 import java.util.Random;
 
 import cnn.interfaces.ActivationFunction;
@@ -13,7 +14,7 @@ import cnn.interfaces.ParameterizedLayer;
  * A convolutional layer in a neural network.
  * This layer applies a set of learnable filters to the input tensor, followed by an activation function.
  */
-public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer {
+public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Serializable {
     private int filterSize;
     private int numFilters;
     private int stride;
