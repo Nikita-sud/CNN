@@ -13,12 +13,12 @@ public class Main {
         double learningRate = 0.1;
         CNN cnn = new CNN(learningRate,1, 28, 28);
 
-        cnn.addLayer(new ConvolutionalLayer(3, 3, 1, new ELU(1)));
-        cnn.addLayer(new PoolingLayer(2, PoolingType.AVERAGE));
+        cnn.addLayer(new ConvolutionalLayer(5, 5, 1, new ELU(1)));
+        cnn.addLayer(new PoolingLayer(2, PoolingType.MAX));
         cnn.addLayer(new FlattenLayer());
         cnn.addLayer(new FullyConnectedLayer(60, new ELU(1)));
         cnn.addLayer(new FullyConnectedLayer(10, new ELU(1)));
-        cnn.addLayer(new SoftmaxLayer());  
+        cnn.addLayer(new SoftmaxLayer());
 
         String trainImagesFile = "data/train-images.idx3-ubyte";
         String trainLabelsFile = "data/train-labels.idx1-ubyte";
