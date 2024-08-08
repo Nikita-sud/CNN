@@ -5,12 +5,7 @@ import cnn.interfaces.Layer;
 import cnn.interfaces.ParameterizedLayer;
 import cnn.utils.ImageData;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,6 +19,7 @@ public class CNN implements Serializable {
     private List<Layer> layers;
     private double learningRate;
     private int[] inputShape;
+    private List<int[]> layerShapes;
 
     /**
      * Constructs a CNN with a specified learning rate and input shape.
@@ -35,6 +31,7 @@ public class CNN implements Serializable {
         this.layers = new ArrayList<>();
         this.learningRate = learningRate;
         this.inputShape = inputShape;
+        this.layerShapes = new ArrayList<>();
     }
 
     /**
@@ -43,6 +40,7 @@ public class CNN implements Serializable {
      * @param layer the layer to be added to the CNN
      */
     public void addLayer(Layer layer) {
+        int[] currentShape = inputShape.clone();
         if (layer instanceof AdaptiveLayer) {
             ((AdaptiveLayer) layer).initialize(inputShape);
             inputShape = layer.getOutputShape(inputShape);
@@ -50,6 +48,8 @@ public class CNN implements Serializable {
             inputShape = layer.getOutputShape(inputShape);
         }
         layers.add(layer);
+        layerShapes.add(currentShape);
+        layerShapes.add(inputShape.clone());
     }
 
     /**
@@ -270,4 +270,19 @@ public class CNN implements Serializable {
             return null;
         }
     }
+
+    /**
+     * Prints a summary of the CNN architecture.
+     */
+    public void printNetworkSummary() {
+        System.out.println("CNN Network Summary:");
+        System.out.println("Number of layers: " + layers.size());
+        for (int i = 0; i < layers.size(); i++) {
+            int[] inputShape = layerShapes.get(2 * i);
+            int[] outputShape = layerShapes.get(2 * i + 1);
+            Layer layer = layers.get(i);
+            System.out.println("Layer " + (i + 1) + ": " + layer.getClass().getSimpleName() + " -> Input Shape: " + java.util.Arrays.toString(inputShape) + ", Output Shape: " + java.util.Arrays.toString(outputShape));
+        }
+    }
 }
+

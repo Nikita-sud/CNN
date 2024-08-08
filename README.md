@@ -16,21 +16,51 @@ This project implements a Convolutional Neural Network (CNN) from scratch in Jav
 - MNIST data reader
 - SGD training with mini-batches
 - Model saving and loading
+- Drawing panel for digit input
+- Digit recognizer for hand-drawn digits
 
 ## Directory Structure
 ```
 |-- .vscode
+|   |-- settings.json
 |-- data
+|   |-- data/t10k-images.idx3-ubyte
+|   |-- data/t10k-labels.idx1-ubyte
+|   |-- data/train-images.idx3-ubyte
+|   |-- data/train-labels.idx1-ubyte
 |-- savedNetwork
+|   |-- my_cnn.dat
 |-- src
 |   |-- main/java/cnn
+|   |   |-- digitsDrawing
+|   |       |-- DrawingPanel.java
 |   |   |-- interfaces
+|   |       |-- ActivationFunction.java
+|   |       |-- AdaptiveLayer.java
+|   |       |-- Layer.java
+|   |       |-- ParameterizedLayer.java
 |   |   |-- layers
+|   |       |-- BatchNormalizationLayer.java
+|   |       |-- ConvolutionalLayer.java
+|   |       |-- DropoutLayer.java
+|   |       |-- FlattenLayer.java
+|   |       |-- FullyConnectedLayer.java
+|   |       |-- PoolingLayer.java
+|   |       |-- SoftmaxLayer.java
 |   |   |-- utils
+|   |       |-- ELU.java
+|   |       |-- ImageData.java
+|   |       |-- ImageProcessor.java
+|   |       |-- LeakyReLU.java
+|   |       |-- MatrixUtils.java
+|   |       |-- ReLU.java
+|   |       |-- Sigmoid.java
+|   |       |-- Tanh.java
 |   |   |-- CNN.java
+|   |   |-- DigitRecognizer.java
 |   |   |-- Main.java
 |   |   |-- MNISTReader.java
-|   |-- test/java/cnn
+|-- test/java/cnn
 |-- target
 |-- pom.xml
 |-- README.md
@@ -65,6 +95,43 @@ int correct = cnn.evaluate(testDataset);
 System.out.println("Test accuracy: " + (double) correct / testDataset.size());
 ```
 
+### Drawing and Recognizing Digits
+You can use the `DigitRecognizer` class to draw and recognize hand-drawn digits. The `DigitRecognizer` class uses the trained CNN model to predict the digit drawn on a `DrawingPanel`.
+
+To run the `DigitRecognizer` application:
+```java
+public static void main(String[] args) {
+    CNN cnn = CNN.loadNetwork("savedNetwork/my_cnn.dat");
+    if (cnn == null) {
+        System.out.println("Failed to load CNN.");
+        return;
+    } else {
+        cnn.printNetworkSummary();
+    }
+
+    DigitRecognizer recognizer = new DigitRecognizer(cnn);
+    JFrame frame = new JFrame("Draw a digit");
+    DrawingPanel panel = new DrawingPanel(28, 28);
+    frame.add(panel);
+
+    JLabel resultLabel = new JLabel("Recognized digit: ");
+    resultLabel.setFont(new Font("Serif", Font.BOLD, 24)); 
+    frame.add(resultLabel, BorderLayout.SOUTH);
+
+    // Timer to update the result label every 500 milliseconds (0.5 seconds)
+    Timer timer = new Timer(500, e -> {
+        BufferedImage image = panel.getImage();
+        int digit = recognizer.recognize(image);
+        resultLabel.setText("Recognized digit: " + digit);
+    });
+    timer.start();
+
+    frame.pack();
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    frame.setVisible(true);
+}
+```
+
 ## Project Structure
 ### Interfaces
 - `ActivationFunction`: Defines methods for applying an activation function and its derivative.
@@ -84,10 +151,15 @@ System.out.println("Test accuracy: " + (double) correct / testDataset.size());
 ### Utilities
 - `MatrixUtils`: Contains various matrix operations used in convolutional neural networks.
 - `ImageData`: Represents image data and its corresponding label.
+- `ImageProcessor`: Utility class for processing images for use in a CNN.
 - Activation Functions: Implementations of various activation functions (`ReLU`, `LeakyReLU`, `ELU`, `Sigmoid`, `Tanh`).
 
 ### Main Class
 - `Main`: Demonstrates how to construct, train, and evaluate the CNN using the MNIST dataset.
+
+### Drawing and Recognizing Digits
+- `DrawingPanel`: Panel for drawing digits and visualizing hand-drawn digits.
+- `DigitRecognizer`: Class for recognizing hand-drawn digits using a CNN.
 
 ## Contributing
 If you would like to contribute to this project, please fork the repository and submit a pull request with your changes.
@@ -96,3 +168,4 @@ If you would like to contribute to this project, please fork the repository and 
 This project is for educational purposes and is not licensed under any specific terms.
 
 For any questions or suggestions, feel free to open an issue or contact the project maintainer through your profile contact information.
+```
