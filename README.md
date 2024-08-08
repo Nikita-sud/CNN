@@ -168,4 +168,3 @@ If you would like to contribute to this project, please fork the repository and 
 This project is for educational purposes and is not licensed under any specific terms.
 
 For any questions or suggestions, feel free to open an issue or contact the project maintainer through your profile contact information.
-```
