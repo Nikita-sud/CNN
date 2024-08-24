@@ -36,7 +36,7 @@ public class Main {
         String testLabelsFile = "data/t10k-labels.idx1-ubyte";
         List<ImageData> testDataset = MNISTReader.readMNISTData(testImagesFile, testLabelsFile);
 
-        cnn.SGD(trainDataset, 50, 32, testDataset,learningRate,"savedNetwork/my_cnn.dat"); // Увеличение количества эпох и размера батча
+        cnn.SGD(trainDataset, 50, 32, testDataset,learningRate);
 
         double[][][] input = testDataset.get(2).getImageData();
         double[][][] output = cnn.forward(input);
