@@ -11,26 +11,45 @@ import java.util.Random;
 /**
  * A fully connected layer in a neural network, also known as a dense layer.
  * This layer connects every input neuron to every output neuron.
+ * It supports L1 and L2 regularization.
  */
-public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, Serializable{
+public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, Serializable {
     private int inputSize;
     private int outputSize;
     private double[][] weights;
     private double[] biases;
+    private double lambdaL1;
+    private double lambdaL2;
     private double[][][] input;
     private ActivationFunction activationFunction;
     private double[][] accumulatedWeightGradients;
     private double[] accumulatedBiasGradients;
 
     /**
+     * Constructs a FullyConnectedLayer with the specified output size, activation function, 
+     * and regularization coefficients.
+     *
+     * @param outputSize the number of neurons in the output layer
+     * @param activationFunction the activation function to apply
+     * @param lambdaL1 the L1 regularization coefficient
+     * @param lambdaL2 the L2 regularization coefficient
+     */
+    public FullyConnectedLayer(int outputSize, ActivationFunction activationFunction, double lambdaL1, double lambdaL2) {
+        this.outputSize = outputSize;
+        this.activationFunction = activationFunction;
+        this.lambdaL1 = lambdaL1;
+        this.lambdaL2 = lambdaL2;
+    }
+
+    /**
      * Constructs a FullyConnectedLayer with the specified output size and activation function.
+     * Regularization parameters are set to zero by default.
      *
      * @param outputSize the number of neurons in the output layer
      * @param activationFunction the activation function to apply
      */
     public FullyConnectedLayer(int outputSize, ActivationFunction activationFunction) {
-        this.outputSize = outputSize;
-        this.activationFunction = activationFunction;
+        this(outputSize, activationFunction, 0, 0);
     }
 
     /**
@@ -41,6 +60,9 @@ public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, S
      */
     @Override
     public void initialize(int... inputShape) {
+        if (inputShape.length != 1) {
+            throw new IllegalArgumentException("Input shape must have exactly one dimension");
+        }
         this.inputSize = inputShape[0];
         this.weights = new double[inputSize][outputSize];
         this.biases = new double[outputSize];
@@ -50,6 +72,7 @@ public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, S
 
     /**
      * Initializes the weights of the layer using He initialization.
+     * Weights are initialized with random values drawn from a Gaussian distribution.
      */
     private void initializeWeights() {
         Random rand = new Random();
@@ -65,6 +88,7 @@ public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, S
 
     /**
      * Initializes the accumulated gradients to zero.
+     * This method is used to prepare for gradient accumulation during training.
      */
     private void initializeAccumulatedGradients() {
         accumulatedWeightGradients = new double[inputSize][outputSize];
@@ -72,7 +96,8 @@ public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, S
     }
 
     /**
-     * Performs the forward pass by computing the weighted sum of the inputs and applying the activation function.
+     * Performs the forward pass by computing the weighted sum of the inputs 
+     * and applying the activation function.
      *
      * @param input a 3D array representing the input tensor, expected to be [1][1][inputSize]
      * @return a 3D array representing the output tensor, [1][1][outputSize]
@@ -80,6 +105,9 @@ public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, S
      */
     @Override
     public double[][][] forward(double[][][] input) {
+        if (input.length != 1 || input[0].length != 1 || input[0][0].length != inputSize) {
+            throw new IllegalArgumentException("Input dimensions do not match the expected shape");
+        }
         this.input = input;
         double[] flattenedInput = input[0][0];
 
@@ -92,7 +120,8 @@ public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, S
     }
 
     /**
-     * Performs the backward pass by computing the gradients of the loss with respect to the inputs and parameters.
+     * Performs the backward pass by computing the gradients of the loss 
+     * with respect to the inputs and parameters.
      *
      * @param gradient a 3D array representing the gradient of the loss with respect to the output, [1][1][outputSize]
      * @return a 3D array representing the gradient of the loss with respect to the input, [1][1][inputSize]
@@ -100,6 +129,9 @@ public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, S
      */
     @Override
     public double[][][] backward(double[][][] gradient) {
+        if (gradient.length != 1 || gradient[0].length != 1 || gradient[0][0].length != outputSize) {
+            throw new IllegalArgumentException("Gradient dimensions do not match the expected shape");
+        }
         double[] postActivationGradient = gradient[0][0];
         double[] preActivationGradient = new double[outputSize];
 
@@ -125,8 +157,19 @@ public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, S
         for (int i = 0; i < inputSize; i++) {
             for (int j = 0; j < outputSize; j++) {
                 accumulatedWeightGradients[i][j] += weightGradient[i][j];
+                
+                // L1 regularization
+                if (lambdaL1 != 0) {
+                    accumulatedWeightGradients[i][j] += lambdaL1 * Math.signum(weights[i][j]);
+                }
+                
+                // L2 regularization
+                if (lambdaL2 != 0) {
+                    accumulatedWeightGradients[i][j] += lambdaL2 * weights[i][j];
+                }
             }
         }
+
         for (int j = 0; j < outputSize; j++) {
             accumulatedBiasGradients[j] += biasGradient[j];
         }
@@ -135,7 +178,8 @@ public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, S
     }
 
     /**
-     * Updates the parameters of the layer using the accumulated gradients and a given learning rate.
+     * Updates the parameters of the layer using the accumulated gradients 
+     * and a given learning rate.
      *
      * @param learningRate the learning rate for the update
      * @param miniBatchSize the size of the mini-batch for averaging the gradients
@@ -156,6 +200,7 @@ public class FullyConnectedLayer implements AdaptiveLayer, ParameterizedLayer, S
 
     /**
      * Resets the accumulated gradients to zero.
+     * This is typically called after the parameters have been updated.
      */
     @Override
     public void resetGradients() {

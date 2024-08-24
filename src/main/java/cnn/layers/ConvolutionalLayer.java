@@ -1,7 +1,7 @@
 package cnn.layers;
 
 import cnn.utils.MatrixUtils;
-import cnn.utils.ReLU;
+import cnn.utils.activationFunctions.ReLU;
 
 import java.io.Serializable;
 import java.util.Random;
@@ -11,8 +11,8 @@ import cnn.interfaces.AdaptiveLayer;
 import cnn.interfaces.ParameterizedLayer;
 
 /**
- * A convolutional layer in a neural network.
- * This layer applies a set of learnable filters to the input tensor, followed by an activation function.
+ * A convolutional layer in a neural network that applies a set of learnable filters to the input tensor,
+ * followed by an activation function. This layer supports L1 and L2 regularization for the filters.
  */
 public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Serializable {
     private int filterSize;
@@ -20,6 +20,8 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
     private int stride;
     private double[][][][] filters;
     private double[] biases;
+    private double lambdaL1;
+    private double lambdaL2;
     private double[][][] input;
     private double[][][] activatedOutput;
     private ActivationFunction activationFunction;
@@ -27,12 +29,58 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
     private double[] accumulatedBiasGradients;
 
     /**
-     * Constructs a ConvolutionalLayer with the specified filter size, number of filters, stride, and activation function.
+     * Constructs a ConvolutionalLayer with the specified filter size, number of filters, stride,
+     * activation function, and regularization parameters.
      *
-     * @param filterSize the size of the filter
-     * @param numFilters the number of filters
-     * @param stride the stride of the convolution
-     * @param activationFunction the activation function to apply
+     * @param filterSize        the size of the filter (assumes square filters)
+     * @param numFilters        the number of filters in the layer
+     * @param stride            the stride of the convolution operation
+     * @param activationFunction the activation function to apply after the convolution
+     * @param lambdaL1          the L1 regularization parameter (use 0 for no L1 regularization)
+     * @param lambdaL2          the L2 regularization parameter (use 0 for no L2 regularization)
+     */
+    public ConvolutionalLayer(int filterSize, int numFilters, int stride, ActivationFunction activationFunction, double lambdaL1, double lambdaL2) {
+        this.filterSize = filterSize;
+        this.numFilters = numFilters;
+        this.stride = stride;
+        this.activationFunction = activationFunction;
+        this.lambdaL1 = lambdaL1;
+        this.lambdaL2 = lambdaL2;
+    }
+
+    /**
+     * Constructs a ConvolutionalLayer with the specified filter size, number of filters,
+     * activation function, and regularization parameters. Uses a default stride of 1.
+     *
+     * @param filterSize        the size of the filter (assumes square filters)
+     * @param numFilters        the number of filters in the layer
+     * @param activationFunction the activation function to apply after the convolution
+     * @param lambdaL1          the L1 regularization parameter (use 0 for no L1 regularization)
+     * @param lambdaL2          the L2 regularization parameter (use 0 for no L2 regularization)
+     */
+    public ConvolutionalLayer(int filterSize, int numFilters, ActivationFunction activationFunction, double lambdaL1, double lambdaL2) {
+        this(filterSize, numFilters, 1, activationFunction, lambdaL1, lambdaL2);
+    }
+
+    /**
+     * Constructs a ConvolutionalLayer with the specified filter size and number of filters.
+     * Uses a default stride of 1, ReLU activation function, and no regularization.
+     *
+     * @param filterSize the size of the filter (assumes square filters)
+     * @param numFilters the number of filters in the layer
+     */
+    public ConvolutionalLayer(int filterSize, int numFilters) {
+        this(filterSize, numFilters, 1, new ReLU(), 0, 0);
+    }
+
+    /**
+     * Constructs a ConvolutionalLayer with the specified filter size, number of filters, stride,
+     * and activation function. No regularization is applied.
+     *
+     * @param filterSize        the size of the filter (assumes square filters)
+     * @param numFilters        the number of filters in the layer
+     * @param stride            the stride of the convolution operation
+     * @param activationFunction the activation function to apply after the convolution
      */
     public ConvolutionalLayer(int filterSize, int numFilters, int stride, ActivationFunction activationFunction) {
         this.filterSize = filterSize;
@@ -43,31 +91,21 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
 
     /**
      * Constructs a ConvolutionalLayer with the specified filter size, number of filters, and activation function.
-     * Uses a default stride of 1.
+     * Uses a default stride of 1 and no regularization.
      *
-     * @param filterSize the size of the filter
-     * @param numFilters the number of filters
-     * @param activationFunction the activation function to apply
+     * @param filterSize        the size of the filter (assumes square filters)
+     * @param numFilters        the number of filters in the layer
+     * @param activationFunction the activation function to apply after the convolution
      */
     public ConvolutionalLayer(int filterSize, int numFilters, ActivationFunction activationFunction) {
         this(filterSize, numFilters, 1, activationFunction);
     }
 
     /**
-     * Constructs a ConvolutionalLayer with the specified filter size and number of filters.
-     * Uses a default stride of 1 and ReLU activation function.
+     * Initializes the filters with random values based on the input depth.
+     * The random values are generated using a Gaussian distribution scaled by the input depth and filter size.
      *
-     * @param filterSize the size of the filter
-     * @param numFilters the number of filters
-     */
-    public ConvolutionalLayer(int filterSize, int numFilters) {
-        this(filterSize, numFilters, 1, new ReLU());
-    }
-
-    /**
-     * Initializes the filters with random values.
-     *
-     * @param inputDepth the depth of the input tensor
+     * @param inputDepth the depth of the input tensor (e.g., number of channels)
      */
     private void initializeFilters(int inputDepth) {
         filters = new double[numFilters][inputDepth][filterSize][filterSize];
@@ -84,7 +122,7 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
     }
 
     /**
-     * Initializes the biases with random values.
+     * Initializes the biases for each filter with random values between 0 and 1.
      */
     private void initializeBiases() {
         biases = new double[numFilters];
@@ -94,7 +132,8 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
     }
 
     /**
-     * Initializes the accumulated gradients to zero.
+     * Initializes the accumulated gradients for filters and biases to zero.
+     * This method is used to prepare for the gradient accumulation during backpropagation.
      */
     private void initializeAccumulatedGradients() {
         accumulatedFilterGradients = new double[numFilters][][][];
@@ -105,9 +144,11 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
     }
 
     /**
-     * Initializes the layer with the given input shape.
+     * Initializes the layer with the given input shape. This involves initializing the filters, biases,
+     * and accumulated gradients based on the input depth.
      *
      * @param inputShape an array of integers representing the dimensions of the input tensor
+     *                   (e.g., [depth, height, width])
      */
     @Override
     public void initialize(int... inputShape) {
@@ -121,8 +162,8 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
      * Performs the forward pass through the convolutional layer.
      * Applies the convolution operation followed by the activation function.
      *
-     * @param input a 3D array representing the input tensor
-     * @return a 3D array representing the output tensor after convolution and activation
+     * @param input a 3D array representing the input tensor [depth, height, width]
+     * @return a 3D array representing the output tensor after convolution and activation [numFilters, height, width]
      */
     @Override
     public double[][][] forward(double[][][] input) {
@@ -156,8 +197,8 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
      * Performs the backward pass through the convolutional layer.
      * Computes the gradients of the loss with respect to the input tensor, filters, and biases.
      *
-     * @param gradient a 3D array representing the gradient of the loss with respect to the output
-     * @return a 3D array representing the gradient of the loss with respect to the input
+     * @param gradient a 3D array representing the gradient of the loss with respect to the output [numFilters, height, width]
+     * @return a 3D array representing the gradient of the loss with respect to the input [depth, height, width]
      */
     @Override
     public double[][][] backward(double[][][] gradient) {
@@ -183,6 +224,14 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
                 for (int i = 0; i < filterSize; i++) {
                     for (int j = 0; j < filterSize; j++) {
                         accumulatedFilterGradients[f][d][i][j] += filterGrad[i][j];
+                        // L1 Regularization
+                        if (lambdaL1 != 0) {
+                            accumulatedFilterGradients[f][d][i][j] += lambdaL1 * Math.signum(filters[f][d][i][j]);
+                        }
+                        // L2 Regularization
+                        if (lambdaL2 != 0) {
+                            accumulatedFilterGradients[f][d][i][j] += lambdaL2 * filters[f][d][i][j];
+                        }
                     }
                 }
 
@@ -209,8 +258,9 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
 
     /**
      * Updates the parameters (filters and biases) of the layer using the accumulated gradients.
+     * The parameters are updated using the specified learning rate and mini-batch size.
      *
-     * @param learningRate the learning rate to use for updating the parameters
+     * @param learningRate  the learning rate to use for updating the parameters
      * @param miniBatchSize the size of the mini-batch used for averaging the gradients
      */
     @Override
@@ -231,6 +281,7 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
 
     /**
      * Resets the accumulated gradients for filters and biases to zero.
+     * This is typically called after the parameters are updated.
      */
     @Override
     public void resetGradients() {
@@ -252,8 +303,8 @@ public class ConvolutionalLayer implements AdaptiveLayer, ParameterizedLayer, Se
     /**
      * Computes the output shape of the layer given the input shape.
      *
-     * @param inputShape an array of integers representing the dimensions of the input tensor
-     * @return an array of integers representing the dimensions of the output tensor
+     * @param inputShape an array of integers representing the dimensions of the input tensor [depth, height, width]
+     * @return an array of integers representing the dimensions of the output tensor [numFilters, height, width]
      */
     @Override
     public int[] getOutputShape(int... inputShape) {

@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 import cnn.utils.ImageData;
+import cnn.utils.ImageAugmentation; // Assuming you have a utility class for augmentations
 
 /**
  * A utility class for reading MNIST data from IDX file format.
@@ -66,8 +67,14 @@ public class MNISTReader {
                 double[] arrayLabel = new double[10];
                 arrayLabel[label] = 1.0;
 
-                // Store the image data and label in the dataset
+                // Original image
                 dataset.add(new ImageData(new double[][][]{imageData}, arrayLabel));
+
+                // Augmented images
+                for (int j = 0; j < 4; j++) {
+                    double[][] augmentedImage = ImageAugmentation.augment(imageData, 2, 5);
+                    dataset.add(new ImageData(new double[][][]{augmentedImage}, arrayLabel));
+                }
             }
 
             return dataset;

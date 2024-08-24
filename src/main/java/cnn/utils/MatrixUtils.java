@@ -1,9 +1,73 @@
 package cnn.utils;
 
+import java.util.Arrays;
+
 /**
  * A utility class for various matrix operations used in convolutional neural networks.
  */
 public class MatrixUtils {
+
+    /**
+     * Pads the input tensor with zeros around the border.
+     *
+     * @param input the input 3D tensor (depth, height, width)
+     * @param pad the amount of padding to add on each side
+     * @return a new 3D tensor with padding added
+     */
+    public static double[][][] pad(double[][][] input, int pad) {
+        int depth = input.length;
+        int height = input[0].length;
+        int width = input[0][0].length;
+
+        // Новые размеры с учетом паддинга
+        int newHeight = height + 2 * pad;
+        int newWidth = width + 2 * pad;
+
+        // Создание нового тензора с добавлением паддинга
+        double[][][] paddedInput = new double[depth][newHeight][newWidth];
+
+        // Копирование данных из оригинального тензора в центр нового
+        for (int d = 0; d < depth; d++) {
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    paddedInput[d][i + pad][j + pad] = input[d][i][j];
+                }
+            }
+        }
+
+        return paddedInput;
+    }
+
+    /**
+     * Removes padding from the input tensor.
+     *
+     * @param input the padded input 3D tensor (depth, height, width)
+     * @param pad the amount of padding that was added on each side
+     * @return a new 3D tensor with the padding removed
+     */
+    public static double[][][] unpad(double[][][] input, int pad) {
+        int depth = input.length;
+        int paddedHeight = input[0].length;
+        int paddedWidth = input[0][0].length;
+
+        // Новые размеры без паддинга
+        int newHeight = paddedHeight - 2 * pad;
+        int newWidth = paddedWidth - 2 * pad;
+
+        // Создание нового тензора без паддинга
+        double[][][] unpaddedInput = new double[depth][newHeight][newWidth];
+
+        // Копирование данных из центрированной части в новый тензор
+        for (int d = 0; d < depth; d++) {
+            for (int i = 0; i < newHeight; i++) {
+                for (int j = 0; j < newWidth; j++) {
+                    unpaddedInput[d][i][j] = input[d][i + pad][j + pad];
+                }
+            }
+        }
+
+        return unpaddedInput;
+    }
 
     /**
      * Applies a filter to a specific region of the input matrix starting at (startX, startY).
@@ -153,62 +217,17 @@ public class MatrixUtils {
      * @return the resulting vector after the multiplication and bias addition
      */
     public static double[] multiply(double[] input, double[][] weights, double[] biases) {
-        int inputSize = input.length;
         int outputSize = biases.length;
-        double[] output = new double[outputSize];
+        double[] output = Arrays.copyOf(biases, outputSize); // Initialize with biases
 
         for (int j = 0; j < outputSize; j++) {
-            double sum = biases[j];
-            for (int i = 0; i < inputSize; i++) {
+            double sum = 0.0;
+            for (int i = 0; i < input.length; i++) {
                 sum += input[i] * weights[i][j];
             }
-            output[j] = sum;
+            output[j] += sum;
         }
         return output;
-    }
-
-    /**
-     * Adds two 3D matrices element-wise.
-     *
-     * @param a the first 3D matrix
-     * @param b the second 3D matrix
-     * @return the resulting 3D matrix after element-wise addition
-     */
-    public static double[][][] add(double[][][] a, double[][][] b) {
-        int depth = a.length;
-        int height = a[0].length;
-        int width = a[0][0].length;
-        double[][][] result = new double[depth][height][width];
-        for (int d = 0; d < depth; d++) {
-            for (int h = 0; h < height; h++) {
-                for (int w = 0; w < width; w++) {
-                    result[d][h][w] = a[d][h][w] + b[d][h][w];
-                }
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Divides a 3D matrix by a scalar value.
-     *
-     * @param a the 3D matrix
-     * @param scalar the scalar value
-     * @return the resulting 3D matrix after division
-     */
-    public static double[][][] divide(double[][][] a, double scalar) {
-        int depth = a.length;
-        int height = a[0].length;
-        int width = a[0][0].length;
-        double[][][] result = new double[depth][height][width];
-        for (int d = 0; d < depth; d++) {
-            for (int h = 0; h < height; h++) {
-                for (int w = 0; w < width; w++) {
-                    result[d][h][w] = a[d][h][w] / scalar;
-                }
-            }
-        }
-        return result;
     }
 
     /**

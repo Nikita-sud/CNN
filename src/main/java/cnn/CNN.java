@@ -17,19 +17,16 @@ import java.util.List;
 public class CNN implements Serializable {
     private static final long serialVersionUID = 1L;
     private List<Layer> layers;
-    private double learningRate;
     private int[] inputShape;
     private List<int[]> layerShapes;
 
     /**
-     * Constructs a CNN with a specified learning rate and input shape.
+     * Constructs a CNN with a specified input shape.
      *
-     * @param learningRate the learning rate for training
      * @param inputShape the shape of the input tensor
      */
-    public CNN(double learningRate, int... inputShape) {
+    public CNN(int... inputShape) {
         this.layers = new ArrayList<>();
-        this.learningRate = learningRate;
         this.inputShape = inputShape;
         this.layerShapes = new ArrayList<>();
     }
@@ -83,9 +80,10 @@ public class CNN implements Serializable {
     /**
      * Updates the parameters of all parameterized layers in the CNN using accumulated gradients.
      *
+     * @param learningRate the learning rate for parameter updates
      * @param miniBatchSize the size of the mini-batch used for averaging the gradients
      */
-    public void updateParameters(int miniBatchSize) {
+    public void updateParameters(double learningRate, int miniBatchSize) {
         for (Layer layer : layers) {
             if (layer instanceof ParameterizedLayer) {
                 ((ParameterizedLayer) layer).updateParameters(learningRate, miniBatchSize);
@@ -111,9 +109,10 @@ public class CNN implements Serializable {
      * @param epochs the number of epochs to train for
      * @param miniBatchSize the size of each mini-batch
      * @param testData the test data set for evaluation
+     * @param learningRate the learning rate for training
      * @param saveFilePath the file path to save the best model
      */
-    public void SGD(List<ImageData> trainingData, int epochs, int miniBatchSize, List<ImageData> testData, String saveFilePath) {
+    public void SGD(List<ImageData> trainingData, int epochs, int miniBatchSize, List<ImageData> testData, double learningRate, String saveFilePath) {
         int nTest = testData.size();
         double bestAccuracy = 0.0;
 
@@ -121,7 +120,7 @@ public class CNN implements Serializable {
             Collections.shuffle(trainingData);
             List<List<ImageData>> miniBatches = createMiniBatches(trainingData, miniBatchSize);
 
-            miniBatches.parallelStream().forEach(miniBatch -> updateMiniBatch(miniBatch, miniBatchSize));
+            miniBatches.parallelStream().forEach(miniBatch -> updateMiniBatch(miniBatch, miniBatchSize, learningRate));
 
             if (nTest > 0) {
                 int correct = evaluate(testData);
@@ -144,15 +143,16 @@ public class CNN implements Serializable {
      * @param epochs the number of epochs to train for
      * @param miniBatchSize the size of each mini-batch
      * @param testData the test data set for evaluation
+     * @param learningRate the learning rate for training
      */
-    public void SGD(List<ImageData> trainingData, int epochs, int miniBatchSize, List<ImageData> testData) {
+    public void SGD(List<ImageData> trainingData, int epochs, int miniBatchSize, List<ImageData> testData, double learningRate) {
         int nTest = testData.size();
 
         for (int epoch = 0; epoch < epochs; epoch++) {
             Collections.shuffle(trainingData);
             List<List<ImageData>> miniBatches = createMiniBatches(trainingData, miniBatchSize);
 
-            miniBatches.parallelStream().forEach(miniBatch -> updateMiniBatch(miniBatch, miniBatchSize));
+            miniBatches.parallelStream().forEach(miniBatch -> updateMiniBatch(miniBatch, miniBatchSize, learningRate));
 
             if (nTest > 0) {
                 int correct = evaluate(testData);
@@ -182,15 +182,16 @@ public class CNN implements Serializable {
      *
      * @param miniBatch the mini-batch of training data
      * @param miniBatchSize the size of the mini-batch
+     * @param learningRate the learning rate for parameter updates
      */
-    private void updateMiniBatch(List<ImageData> miniBatch, int miniBatchSize) {
+    private void updateMiniBatch(List<ImageData> miniBatch, int miniBatchSize, double learningRate) {
         resetGradients();
         for (ImageData data : miniBatch) {
             double[][][] output = forward(data.getImageData());
             double[][][] lossGradient = computeLossGradient(output[0][0], data.getLabel());
             backward(lossGradient);
         }
-        updateParameters(miniBatchSize);
+        updateParameters(learningRate, miniBatchSize);
     }
 
     /**
@@ -285,4 +286,3 @@ public class CNN implements Serializable {
         }
     }
 }
-

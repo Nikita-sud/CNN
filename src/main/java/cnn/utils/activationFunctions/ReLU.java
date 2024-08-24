@@ -1,4 +1,4 @@
-package cnn.utils;
+package cnn.utils.activationFunctions;
 
 import java.io.Serializable;
 
